@@ -84,10 +84,8 @@ export class DBackRuntime {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    for (const entry of this.agents.values()) {
-      if (entry.toolDoneTimer !== null) {
-        clearTimeout(entry.toolDoneTimer);
-      }
+    for (const uid of [...this.agents.keys()]) {
+      this.dropAgent(uid);
     }
     this.ws?.close();
     this.ws = null;
@@ -214,11 +212,6 @@ export class DBackRuntime {
     const entry = this.agents.get(uid);
     if (!entry) return; // Unknown user — ignore
 
-    if (status === 'offline') {
-      this.removeAgent(uid);
-      return;
-    }
-
     if (entry.status === status) return; // No change
     entry.status = status;
     this.applyStatus(entry, status);
@@ -263,20 +256,18 @@ export class DBackRuntime {
       // DND → show as waiting (blocked / do not disturb)
       dispatch({ type: 'agentStatus', id: entry.id, status: 'waiting' });
     }
-    // online / idle → no special status; agent just wanders the office
+    // online / idle / offline → no special status; agent wanders the office
+    // (offline is treated as idle rather than removing the agent)
   }
 
-  private removeAgent(uid: string): void {
+  /** Cleanly remove an agent by uid (used on dispose only) */
+  private dropAgent(uid: string): void {
     const entry = this.agents.get(uid);
     if (!entry) return;
-
     if (entry.toolDoneTimer !== null) {
       clearTimeout(entry.toolDoneTimer);
       entry.toolDoneTimer = null;
     }
-
     this.agents.delete(uid);
-    dispatch({ type: 'agentClosed', id: entry.id });
-    console.log(`[DBackRuntime] Agent ${entry.id} (${entry.username}) went offline`);
   }
 }
