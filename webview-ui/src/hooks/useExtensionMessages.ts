@@ -173,16 +173,24 @@ export function useExtensionMessages(
           { palette?: number; hueShift?: number; seatId?: string }
         >;
         const folderNames = (msg.folderNames || {}) as Record<number, string>;
-        // Buffer agents — they'll be added in layoutLoaded after seats are built
+        // If layout is already ready, add agents immediately; otherwise buffer them
+        // for layoutLoaded (d-back WebSocket responds asynchronously, after layout loads)
         for (const id of incoming) {
           const m = meta[id];
-          pendingAgents.push({
-            id,
-            palette: m?.palette,
-            hueShift: m?.hueShift,
-            seatId: m?.seatId,
-            folderName: folderNames[id],
-          });
+          if (layoutReadyRef.current) {
+            os.addAgent(id, m?.palette, m?.hueShift, m?.seatId, true, folderNames[id]);
+          } else {
+            pendingAgents.push({
+              id,
+              palette: m?.palette,
+              hueShift: m?.hueShift,
+              seatId: m?.seatId,
+              folderName: folderNames[id],
+            });
+          }
+        }
+        if (layoutReadyRef.current && os.characters.size > 0) {
+          saveAgentSeats(os);
         }
         setAgents((prev) => {
           const ids = new Set(prev);
