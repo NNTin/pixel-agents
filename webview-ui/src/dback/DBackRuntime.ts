@@ -66,10 +66,7 @@ export class DBackRuntime {
   /** d-back server ID to connect to (server.data.id, not Discord snowflake) */
   private readonly serverId: string;
 
-  constructor(
-    wsUrl = DBACK_WS_URL ?? DEFAULT_WS_URL,
-    serverId = DBACK_SERVER ?? DEFAULT_SERVER,
-  ) {
+  constructor(wsUrl = DBACK_WS_URL ?? DEFAULT_WS_URL, serverId = DBACK_SERVER ?? DEFAULT_SERVER) {
     this.wsUrl = wsUrl;
     this.serverId = serverId;
   }
@@ -108,9 +105,7 @@ export class DBackRuntime {
     this.ws.onopen = () => {
       console.log('[DBackRuntime] Connected');
       // Send connect request for our configured server
-      this.ws!.send(
-        JSON.stringify({ type: 'connect', data: { server: this.serverId } }),
-      );
+      this.ws!.send(JSON.stringify({ type: 'connect', data: { server: this.serverId } }));
     };
 
     this.ws.onmessage = (event: MessageEvent<string>) => {
@@ -157,7 +152,9 @@ export class DBackRuntime {
         users: Record<string, DBackUser>;
         serverName: string;
       };
-      console.log(`[DBackRuntime] Joined server "${data.serverName}" with ${Object.keys(data.users).length} users`);
+      console.log(
+        `[DBackRuntime] Joined server "${data.serverName}" with ${Object.keys(data.users).length} users`,
+      );
       this.handleInitialUsers(data.users);
     } else if (type === 'presence') {
       const data = msg.data as { uid: string; status: DBackStatus };
