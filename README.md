@@ -62,8 +62,8 @@ If you just want to use Pixel Agents, the easiest way is to download the [VS Cod
 
 This repository now includes two Dev Container profiles:
 
-- **Contributors** — [.devcontainer/devcontainer.json](.devcontainer/devcontainer.json) builds and installs Pixel Agents from your current checkout on every attach. Use this when developing or testing changes in the repo.
-- **Stable Release** — [.devcontainer/devcontainer.stable.json](.devcontainer/devcontainer.stable.json) installs the latest published VSIX from [GitHub Releases](https://github.com/pablodelucca/pixel-agents/releases) on attach. Use this when you want a normal VS Code workspace with the current stable extension, without building from source.
+- **Contributors** — [.devcontainer/develop/devcontainer.json](.devcontainer/develop/devcontainer.json) builds and installs Pixel Agents from your current checkout on every attach. Use this when developing or testing changes in the repo.
+- **Stable Release** — [.devcontainer/stable/devcontainer.json](.devcontainer/stable/devcontainer.json) installs the latest published VSIX from [GitHub Releases](https://github.com/pablodelucca/pixel-agents/releases) on attach. Use this when you want a normal VS Code workspace with the current stable extension, without building from source.
 
 In VS Code, use **Dev Containers: Reopen in Container** or **Dev Containers: Rebuild and Reopen in Container**, then pick the profile you want.
 
