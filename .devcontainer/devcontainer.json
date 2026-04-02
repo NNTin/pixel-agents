@@ -1,5 +1,5 @@
 {
-  "name": "Pixel Agents",
+  "name": "Pixel Agents (Contributors)",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
@@ -26,11 +26,11 @@
       }
     }
   },
-  // Install all npm dependencies and the VSIX packaging tool once on container creation.
+  // Contributor profile: install local dependencies and packaging tooling.
   // Claude Code CLI is intentionally omitted — install it manually after the container starts.
   "postCreateCommand": "npm install && cd webview-ui && npm install && cd .. && npm install -g @vscode/vsce",
-  // On every client attach: build a production VSIX and install it into the running VS Code
-  // Server so the extension is active in the primary window (not just the F5 dev host).
+  // On every client attach: build a production VSIX from the current checkout and install it
+  // into the running VS Code Server so the extension is active in the primary window.
   "postAttachCommand": "npm run package 2>/dev/null && vsce package --no-dependencies 2>/dev/null && VSIX=$(ls pixel-agents-*.vsix 2>/dev/null | head -1) && [ -n \"$VSIX\" ] && code --install-extension \"$VSIX\" --force || true",
   "forwardPorts": [5173],
   // Persist ~/.claude/ (credentials and session JSONL files) across container rebuilds.
