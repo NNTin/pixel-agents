@@ -1,6 +1,11 @@
 {
   "name": "Pixel Agents",
-  "image": "mcr.microsoft.com/devcontainers/node:22-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
