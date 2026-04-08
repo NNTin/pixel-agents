@@ -24,6 +24,21 @@ npm run build
 
 Then press **F5** in VS Code to launch the Extension Development Host.
 
+### Build and install the packaged extension locally
+
+If you want to test the extension the same way end users install it, build a `.vsix` package and install it through the VS Code CLI:
+
+```bash
+npx @vscode/vsce package --allow-star-activation --out pixel-agents-local.vsix
+code --install-extension ./pixel-agents-local.vsix --force
+```
+
+`--force` updates the existing local install with your freshly built package.
+
+If you are using Remote SSH, WSL, or a dev container, `code --install-extension` installs the extension into that current VS Code target.
+
+After installing the `.vsix`, run **Developer: Reload Window** in VS Code to load the updated extension.
+
 ## Development Workflow
 
 For development with live rebuilds, run:
