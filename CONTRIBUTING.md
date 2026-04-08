@@ -82,6 +82,19 @@ Vite will print a local URL (typically `http://localhost:5173`) where the mocked
 | `scripts/`    | Asset extraction and generation tooling                         |
 | `assets/`     | Bundled sprites, catalog, and default layout                    |
 
+## Manual Hook Testing
+
+The repo includes [server/manual-hook-events.http](server/manual-hook-events.http) for manually driving the local hook server while the extension is running.
+
+It covers the basic external-session lifecycle:
+
+- `SessionStart` to stage a pending external session
+- `PreToolUse` to confirm it and mark the agent active
+- `PermissionRequest`, `Notification`, and `Stop` to drive permission/waiting states
+- `SessionEnd` to despawn the agent
+
+Before using it, copy `port` and `token` from `~/.pixel-agents/server.json` into the file variables and set `cwd` to a workspace folder opened in the Extension Development Host. If `cwd` is outside the current workspace, enable **Watch All Sessions** in Pixel Agents first.
+
 ## Code Guidelines
 
 ### Constants
