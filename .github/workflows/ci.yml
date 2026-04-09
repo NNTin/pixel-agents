@@ -331,9 +331,54 @@ jobs:
             echo "| E2E tests | $(status "$E2E_TEST") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  deploy-preview:
+  deploy-preview-precheck:
     needs: e2e
-    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.deploy_precheck.outputs.ready }}
+      reason: ${{ steps.deploy_precheck.outputs.reason }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Check Vercel Configuration
+        id: deploy_precheck
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name || '' }}" != "${{ github.repository }}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=fork-pr" >> "$GITHUB_OUTPUT"
+          elif [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ready" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=missing-secrets" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write Skip Summary
+        if: steps.deploy_precheck.outputs.ready != 'true'
+        shell: bash
+        env:
+          SKIP_REASON: ${{ steps.deploy_precheck.outputs.reason }}
+        run: |
+          if [ "$SKIP_REASON" = "fork-pr" ]; then
+            reason="pull request comes from a fork, so deployment is skipped."
+          else
+            reason="missing one or more required Vercel secrets."
+          fi
+          {
+            echo "## Hosted Browser Preview"
+            echo
+            echo "- Skipped: $reason"
+            echo "- Required secrets: \`VERCEL_TOKEN\`, \`VERCEL_ORG_ID\`, \`VERCEL_PROJECT_ID\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-preview:
+    needs: deploy-preview-precheck
+    if: always() && needs.deploy-preview-precheck.outputs.ready == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
