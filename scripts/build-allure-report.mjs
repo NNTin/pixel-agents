@@ -1,11 +1,28 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const resultsDir = path.join(repoRoot, 'allure-results', 'e2e');
-const reportDir = path.join(repoRoot, 'allure-report', 'e2e');
+const resultsRootDir = path.join(repoRoot, 'allure-results');
+const reportDir = path.join(repoRoot, 'allure-report', 'allure');
+const reportName = 'Pixel Agents Linux Test Report';
+const metadataFileNames = new Set([
+  'categories.json',
+  'environment.json',
+  'environment.properties',
+  'executor.json',
+]);
+const suiteNames = ['e2e', 'server', 'webview'];
 
 function hasFiles(dir) {
   if (!existsSync(dir)) return false;
@@ -18,7 +35,42 @@ function hasFiles(dir) {
   return false;
 }
 
-function writeGithubMetadata() {
+function getSuiteResults() {
+  return suiteNames
+    .map((suiteName) => ({
+      name: suiteName,
+      dir: path.join(resultsRootDir, suiteName),
+    }))
+    .filter(({ dir }) => hasFiles(dir));
+}
+
+function copyResults(sourceDir, targetDir) {
+  for (const entry of readdirSync(sourceDir, { withFileTypes: true })) {
+    const sourcePath = path.join(sourceDir, entry.name);
+
+    if (entry.isDirectory()) {
+      copyResults(sourcePath, targetDir);
+      continue;
+    }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    if (metadataFileNames.has(entry.name)) {
+      continue;
+    }
+
+    const targetPath = path.join(targetDir, entry.name);
+    if (existsSync(targetPath)) {
+      throw new Error(`Duplicate Allure result file detected: ${entry.name}`);
+    }
+
+    copyFileSync(sourcePath, targetPath);
+  }
+}
+
+function writeGithubMetadata(resultsDir, suites) {
   if (!hasFiles(resultsDir)) return;
 
   const serverUrl = process.env['GITHUB_SERVER_URL'];
@@ -38,7 +90,7 @@ function writeGithubMetadata() {
           buildName: workflow && runNumber ? `${workflow} #${runNumber}` : workflow,
           buildOrder: runNumber ? Number.parseInt(runNumber, 10) : undefined,
           buildUrl: `${serverUrl}/${repository}/actions/runs/${runId}`,
-          reportName: 'Pixel Agents E2E',
+          reportName,
         },
         null,
         2,
@@ -48,8 +100,9 @@ function writeGithubMetadata() {
 
   const environmentLines = [
     `deployment=vercel`,
-    `suite=playwright-electron`,
+    `os=${process.platform}`,
     `branch=${refName ?? 'local'}`,
+    `suites=${suites.map(({ name }) => name).join(',')}`,
   ];
   writeFileSync(
     path.join(resultsDir, 'environment.properties'),
@@ -67,7 +120,7 @@ function writePlaceholderReport() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pixel Agents E2E Report Unavailable</title>
+    <title>Pixel Agents Linux Test Report Unavailable</title>
     <style>
       :root {
         color-scheme: light;
@@ -95,9 +148,9 @@ function writePlaceholderReport() {
   </head>
   <body>
     <main>
-      <h1>E2E report unavailable</h1>
-      <p>No Allure results were produced for this run, so there is no hosted report to display.</p>
-      <p>Check the workflow logs for Playwright setup failures or skipped Linux E2E execution.</p>
+      <h1>Linux test report unavailable</h1>
+      <p>No Linux Allure results were produced for this run, so there is no hosted report to display.</p>
+      <p>Check the workflow logs for skipped or failed Linux uploads from the e2e, server, or webview suites.</p>
     </main>
   </body>
 </html>
@@ -105,15 +158,23 @@ function writePlaceholderReport() {
   );
 }
 
-if (!hasFiles(resultsDir)) {
+const suites = getSuiteResults();
+
+if (suites.length === 0) {
   writePlaceholderReport();
   process.exit(0);
 }
 
-writeGithubMetadata();
-
 rmSync(reportDir, { recursive: true, force: true });
 mkdirSync(path.dirname(reportDir), { recursive: true });
+
+const stagedResultsDir = mkdtempSync(path.join(tmpdir(), 'pixel-agents-allure-'));
+
+for (const suite of suites) {
+  copyResults(suite.dir, stagedResultsDir);
+}
+
+writeGithubMetadata(stagedResultsDir, suites);
 
 const allureBinary = path.join(
   repoRoot,
@@ -122,11 +183,19 @@ const allureBinary = path.join(
   process.platform === 'win32' ? 'allure.cmd' : 'allure',
 );
 
-const result = spawnSync(allureBinary, ['generate', resultsDir, '--clean', '-o', reportDir], {
-  cwd: repoRoot,
-  stdio: 'inherit',
-});
+try {
+  const result = spawnSync(
+    allureBinary,
+    ['generate', stagedResultsDir, '--clean', '-o', reportDir, '--name', reportName],
+    {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    },
+  );
 
-if (result.status !== 0) {
-  process.exit(result.status ?? 1);
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+} finally {
+  rmSync(stagedResultsDir, { recursive: true, force: true });
 }

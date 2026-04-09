@@ -81,6 +81,14 @@ jobs:
         run: npm test
         continue-on-error: true
 
+      - name: Upload Linux Webview Allure Results
+        if: always() && steps.install_webview.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-webview-linux
+          if-no-files-found: warn
+          path: allure-results/webview
+
       - name: Format Check
         id: format_check
         if: always() && steps.install_root.outcome == 'success'
@@ -111,6 +119,14 @@ jobs:
         working-directory: server
         run: npm test
         continue-on-error: true
+
+      - name: Upload Linux Server Allure Results
+        if: always() && steps.build.outcome == 'success' && steps.install_server.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-server-linux
+          if-no-files-found: warn
+          path: allure-results/server
 
       # --- Audit Checks (blocking) ---
 
@@ -424,6 +440,20 @@ jobs:
           name: allure-results-e2e-linux
           path: allure-results/e2e
 
+      - name: Download Linux Server Allure Results
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: allure-results-server-linux
+          path: allure-results/server
+
+      - name: Download Linux Webview Allure Results
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: allure-results-webview-linux
+          path: allure-results/webview
+
       - name: Prepare Vercel Output
         run: npm run vercel:prepare
 
@@ -460,7 +490,7 @@ jobs:
             echo "- Deployment type: $DEPLOYMENT_KIND"
             echo "- Deployment URL: $base_url"
             echo "- Webview preview: $base_url/webview/"
-            echo "- Linux Allure report: $base_url/reports/e2e/"
+            echo "- Linux Allure report: $base_url/reports/allure/"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment preview URL on PR
@@ -476,6 +506,6 @@ jobs:
           gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body "$(cat <<EOF
           🔍 Vercel Preview: $base_url
           - Webview preview: $base_url/webview/
-          - Linux Allure report: $base_url/reports/e2e/
+          - Linux Allure report: $base_url/reports/allure/
           EOF
           )"

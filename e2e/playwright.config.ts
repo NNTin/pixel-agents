@@ -2,6 +2,8 @@ import path from 'path';
 
 import { defineConfig } from '@playwright/test';
 
+process.env['ALLURE_LABEL_epic'] ??= 'e2e';
+
 const artifactsDir = path.join(__dirname, '../test-results/e2e');
 const allureResultsDir = path.join(__dirname, '../allure-results/e2e');
 
