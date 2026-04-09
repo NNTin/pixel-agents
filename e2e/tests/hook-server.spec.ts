@@ -5,7 +5,7 @@ import path from 'path';
 import { sendHookEvent, waitForHookServer } from '../helpers/hook-server';
 import { launchVSCode, waitForWorkbench } from '../helpers/launch';
 import {
-  configureHookServerTestView,
+  configureHookServerTestSettings,
   getPixelAgentsFrame,
   openPixelAgentsPanel,
 } from '../helpers/webview';
@@ -24,7 +24,7 @@ test('hook server stages, activates, notifies, and despawns an external session'
     await openPixelAgentsPanel(window);
 
     const frame = await getPixelAgentsFrame(window);
-    await configureHookServerTestView(frame);
+    await configureHookServerTestSettings(frame);
 
     const serverConfig = await waitForHookServer(tmpHome);
     await testInfo.attach('hook-server-config', {
@@ -32,7 +32,10 @@ test('hook server stages, activates, notifies, and despawns an external session'
       contentType: 'application/json',
     });
 
-    const agentCard = frame.getByText('Agent #1', { exact: true });
+    const agentOverlays = frame.locator('[data-testid="agent-overlay"]');
+    const runningOverlay = agentOverlays.filter({ hasText: 'Running: npm test' });
+    const approvalOverlay = agentOverlays.filter({ hasText: 'Needs approval' });
+    const waitingOverlay = agentOverlays.filter({ hasText: 'Might be waiting for input' });
 
     const stageSessionEvent = {
       session_id: sessionId,
@@ -44,7 +47,7 @@ test('hook server stages, activates, notifies, and despawns an external session'
     sentEvents.push(JSON.stringify(stageSessionEvent));
 
     await frame.waitForTimeout(500);
-    await expect(agentCard).toHaveCount(0);
+    await expect(agentOverlays).toHaveCount(0);
 
     const confirmSessionEvent = {
       session_id: sessionId,
@@ -57,10 +60,8 @@ test('hook server stages, activates, notifies, and despawns an external session'
     await sendHookEvent(serverConfig, confirmSessionEvent);
     sentEvents.push(JSON.stringify(confirmSessionEvent));
 
-    await expect(agentCard).toBeVisible({ timeout: 15_000 });
-    await expect(frame.getByText('Running: npm test', { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(agentOverlays).toHaveCount(1, { timeout: 15_000 });
+    await expect(runningOverlay).toBeVisible({ timeout: 15_000 });
 
     const permissionEvent = {
       session_id: sessionId,
@@ -69,9 +70,7 @@ test('hook server stages, activates, notifies, and despawns an external session'
     await sendHookEvent(serverConfig, permissionEvent);
     sentEvents.push(JSON.stringify(permissionEvent));
 
-    await expect(frame.getByText('Needs approval', { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(approvalOverlay).toBeVisible({ timeout: 15_000 });
 
     const idlePromptEvent = {
       session_id: sessionId,
@@ -81,9 +80,7 @@ test('hook server stages, activates, notifies, and despawns an external session'
     await sendHookEvent(serverConfig, idlePromptEvent);
     sentEvents.push(JSON.stringify(idlePromptEvent));
 
-    await expect(frame.getByText('Might be waiting for input', { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(waitingOverlay).toBeVisible({ timeout: 15_000 });
 
     const endSessionEvent = {
       session_id: sessionId,
@@ -93,7 +90,7 @@ test('hook server stages, activates, notifies, and despawns an external session'
     await sendHookEvent(serverConfig, endSessionEvent);
     sentEvents.push(JSON.stringify(endSessionEvent));
 
-    await expect(agentCard).toHaveCount(0, { timeout: 15_000 });
+    await expect(agentOverlays).toHaveCount(0, { timeout: 15_000 });
   } finally {
     if (sentEvents.length > 0) {
       await testInfo.attach('hook-events', {
