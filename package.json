@@ -68,6 +68,7 @@
   "scripts": {
     "vscode:prepublish": "npm run package",
     "build:webview": "cd webview-ui && npm run build",
+    "build:webview:preview": "node scripts/build-webview-preview.mjs",
     "compile": "npm run check-types && npm run lint && node esbuild.js && npm run build:webview",
     "build": "npm run compile",
     "watch": "npm-run-all -p watch:*",
@@ -86,6 +87,8 @@
     "test": "npm run test:webview && npm run test:server",
     "e2e": "playwright test --config e2e/playwright.config.ts",
     "e2e:debug": "playwright test --config e2e/playwright.config.ts --debug",
+    "e2e:report": "node scripts/build-allure-report.mjs",
+    "vercel:prepare": "npm run build:webview:preview && npm run e2e:report && node scripts/assemble-vercel-output.mjs",
     "knip": "knip"
   },
   "devDependencies": {
@@ -94,6 +97,8 @@
     "@types/pngjs": "^6.0.5",
     "@types/vscode": "^1.105.0",
     "@vscode/test-electron": "^2.5.2",
+    "allure-commandline": "^2.38.1",
+    "allure-playwright": "^3.7.1",
     "esbuild": "^0.28.0",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
@@ -113,6 +118,7 @@
     "server/**/*.ts": "eslint --fix",
     "core/src/**/*.ts": "eslint --fix",
     "webview-ui/src/**/*.{ts,tsx}": "eslint --fix",
+    "scripts/**/*.{js,mjs}": "prettier --write",
     "*.{ts,tsx,js,mjs,css,json,md}": "prettier --write",
     "webview-ui/**/*.{ts,tsx,js,css,json}": "prettier --write"
   }

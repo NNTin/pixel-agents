@@ -4,6 +4,7 @@ import path from 'path';
 
 export const VSCODE_CACHE_DIR = path.join(__dirname, '../.vscode-test');
 export const VSCODE_PATH_FILE = path.join(VSCODE_CACHE_DIR, 'vscode-executable.txt');
+export const ALLURE_RESULTS_DIR = path.join(__dirname, '../allure-results/e2e');
 
 /**
  * On Windows, VS Code checks for an InnoSetup mutex (`win32MutexName + "-updating"`)
@@ -63,6 +64,8 @@ function patchProductJsonForWindows(vscodePath: string): void {
 }
 
 export default async function globalSetup(): Promise<void> {
+  fs.rmSync(ALLURE_RESULTS_DIR, { recursive: true, force: true });
+
   console.log('[e2e] Ensuring VS Code is downloaded...');
   const vscodePath = await downloadAndUnzipVSCode({
     version: 'stable',

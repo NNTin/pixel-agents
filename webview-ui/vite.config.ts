@@ -13,6 +13,9 @@ import {
   decodeAllWalls,
 } from '../core/src/assets/loader.ts';
 
+const DEFAULT_WEBVIEW_BASE = './';
+const DEFAULT_WEBVIEW_OUT_DIR = '../dist/webview';
+
 // ── Decoded asset cache (invalidated on file change) ─────────────────────────
 
 interface DecodedCache {
@@ -26,7 +29,7 @@ interface DecodedCache {
 
 function browserMockAssetsPlugin(): Plugin {
   const assetsDir = path.resolve(__dirname, 'public/assets');
-  const distAssetsDir = path.resolve(__dirname, '../dist/webview/assets');
+  let distAssetsDir = path.resolve(__dirname, DEFAULT_WEBVIEW_OUT_DIR, 'assets');
 
   const cache: DecodedCache = { characters: null, floors: null, walls: null, furniture: null };
 
@@ -39,6 +42,9 @@ function browserMockAssetsPlugin(): Plugin {
 
   return {
     name: 'browser-mock-assets',
+    configResolved(config) {
+      distAssetsDir = path.resolve(config.root, config.build.outDir, 'assets');
+    },
     configureServer(server) {
       // Strip trailing slash: '/' → '', '/sub/' → '/sub'
       const base = server.config.base.replace(/\/$/, '');
@@ -99,11 +105,17 @@ function browserMockAssetsPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
+function normalizeBase(base: string): string {
+  if (base === './') return base;
+  const withLeadingSlash = base.startsWith('/') ? base : `/${base}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
+}
+
+export default defineConfig(() => ({
   plugins: [tailwindcss(), react(), browserMockAssetsPlugin()],
   build: {
-    outDir: '../dist/webview',
+    outDir: process.env['WEBVIEW_OUT_DIR'] ?? DEFAULT_WEBVIEW_OUT_DIR,
     emptyOutDir: true,
   },
-  base: './',
-});
+  base: normalizeBase(process.env['WEBVIEW_BASE'] ?? DEFAULT_WEBVIEW_BASE),
+}));
