@@ -17,7 +17,7 @@ test('hook server stages, activates, notifies, and despawns an external session'
   const sentEvents: string[] = [];
   const sessionId = 'manual-session-1';
 
-  test.setTimeout(120_000);
+  test.setTimeout(125_000);
 
   try {
     await waitForWorkbench(window);
@@ -72,6 +72,9 @@ test('hook server stages, activates, notifies, and despawns an external session'
 
     await expect(approvalOverlay).toBeVisible({ timeout: 15_000 });
 
+    // below timeout is for better video demonstration
+    await window.waitForTimeout(2_000);
+
     const idlePromptEvent = {
       session_id: sessionId,
       hook_event_name: 'Notification',
@@ -81,6 +84,9 @@ test('hook server stages, activates, notifies, and despawns an external session'
     sentEvents.push(JSON.stringify(idlePromptEvent));
 
     await expect(waitingOverlay).toBeVisible({ timeout: 15_000 });
+
+    // below timeout is for better video demonstration
+    await window.waitForTimeout(2_000);
 
     const endSessionEvent = {
       session_id: sessionId,
@@ -125,6 +131,9 @@ test('hook server stages, activates, notifies, and despawns an external session'
     } catch {
       // screenshot failure is non-fatal
     }
+
+    // below timeout is not really needed, added to see video capture
+    await window.waitForTimeout(1_000);
 
     await session.cleanup();
 
