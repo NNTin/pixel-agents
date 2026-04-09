@@ -70,8 +70,9 @@
     "test": "npm run test:webview && npm run test:server",
     "e2e": "playwright test --config e2e/playwright.config.ts",
     "e2e:debug": "playwright test --config e2e/playwright.config.ts --debug",
-    "e2e:report": "node scripts/build-allure-report.mjs",
-    "vercel:prepare": "npm run build:webview:preview && npm run e2e:report && node scripts/assemble-vercel-output.mjs",
+    "test:report": "node scripts/build-allure-report.mjs",
+    "e2e:report": "npm run test:report",
+    "vercel:prepare": "npm run build:webview:preview && npm run test:report && node scripts/assemble-vercel-output.mjs",
     "knip": "knip"
   },
   "devDependencies": {

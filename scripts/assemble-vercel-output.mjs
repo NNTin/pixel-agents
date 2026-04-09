@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewDir = path.join(repoRoot, 'dist', 'webview-preview');
-const reportDir = path.join(repoRoot, 'allure-report', 'e2e');
+const reportDir = path.join(repoRoot, 'allure-report', 'allure');
 const vercelOutputDir = path.join(repoRoot, '.vercel', 'output');
 const staticDir = path.join(vercelOutputDir, 'static');
 const packageJson = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
@@ -44,13 +44,18 @@ rmSync(vercelOutputDir, { recursive: true, force: true });
 mkdirSync(staticDir, { recursive: true });
 
 cpSync(previewDir, path.join(staticDir, 'webview'), { recursive: true });
-cpSync(reportDir, path.join(staticDir, 'reports', 'e2e'), { recursive: true });
+cpSync(reportDir, path.join(staticDir, 'reports', 'allure'), { recursive: true });
 
 writeRedirectPage(path.join(staticDir, 'index.html'), 'Pixel Agents Preview', '/webview/');
 writeRedirectPage(
   path.join(staticDir, 'reports', 'index.html'),
   'Pixel Agents Reports',
-  '/reports/e2e/',
+  '/reports/allure/',
+);
+writeRedirectPage(
+  path.join(staticDir, 'reports', 'e2e', 'index.html'),
+  'Pixel Agents Reports',
+  '/reports/allure/',
 );
 
 writeFileSync(
@@ -70,6 +75,9 @@ writeFileSync(
         },
         'reports/index.html': {
           path: 'reports',
+        },
+        'reports/allure/index.html': {
+          path: 'reports/allure',
         },
         'reports/e2e/index.html': {
           path: 'reports/e2e',

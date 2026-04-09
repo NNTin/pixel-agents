@@ -3,10 +3,10 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:f
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { build } from 'vite';
+import { test } from 'vitest';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
