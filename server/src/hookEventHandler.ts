@@ -600,6 +600,8 @@ export class HookEventHandler {
   ): void {
     cancelWaitingTimer(agentId, this.waitingTimers);
     cancelPermissionTimer(agentId, this.permissionTimers);
+    const hadHookOnlyTool = !!agent.currentHookToolId;
+    agent.currentHookToolId = undefined;
 
     // Clear foreground tools, preserve background agents (same logic as turn_duration handler)
     const hasForegroundTools = agent.activeToolIds.size > agent.backgroundAgentToolIds.size;
@@ -634,6 +636,8 @@ export class HookEventHandler {
       agent.activeToolNames.clear();
       agent.activeSubagentToolIds.clear();
       agent.activeSubagentToolNames.clear();
+      webview?.postMessage({ type: 'agentToolsClear', id: agentId });
+    } else if (hadHookOnlyTool) {
       webview?.postMessage({ type: 'agentToolsClear', id: agentId });
     }
 

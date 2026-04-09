@@ -126,3 +126,34 @@ export async function clickAddAgent(frame: Frame): Promise<void> {
   await expect(btn).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
   await btn.click();
 }
+
+/**
+ * Enable the settings needed for the hook-server e2e assertions:
+ * - Watch All Sessions, so hooks-only external sessions are adopted
+ * - Debug View, so assertions can use stable text instead of canvas pixels
+ */
+export async function configureHookServerTestView(frame: Frame): Promise<void> {
+  const settingsButton = frame.locator('button', { hasText: 'Settings' });
+  await expect(settingsButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+  await settingsButton.click();
+
+  const settingsModal = frame
+    .locator('div.fixed')
+    .filter({ has: frame.getByText('Settings', { exact: true }) });
+  await expect(settingsModal).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+
+  await frame.locator('button', { hasText: 'Watch All Sessions' }).click();
+  await frame.locator('button', { hasText: 'Debug View' }).click();
+
+  const closeButton = settingsModal.getByRole('button', { name: 'x', exact: true });
+  await expect(closeButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+  await closeButton.click();
+
+  await expect(settingsModal).toBeHidden({ timeout: WEBVIEW_TIMEOUT_MS });
+  await expect(frame.getByText('Debug View', { exact: true })).toBeVisible({
+    timeout: WEBVIEW_TIMEOUT_MS,
+  });
+
+  // Allow the extension host to process the settings updates before hook events arrive.
+  await frame.waitForTimeout(500);
+}
