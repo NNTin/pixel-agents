@@ -1,4 +1,4 @@
-import type { Frame, Page } from '@playwright/test';
+import type { Frame, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 const WEBVIEW_TIMEOUT_MS = 30_000;
@@ -125,4 +125,44 @@ export async function clickAddAgent(frame: Frame): Promise<void> {
   const btn = frame.locator('button', { hasText: '+ Agent' });
   await expect(btn).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
   await btn.click();
+}
+
+async function setCheckbox(modal: Locator, label: string, checked: boolean): Promise<void> {
+  const button = modal.locator('button', { hasText: label });
+  await expect(button).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+
+  const indicator = button.locator('span').last();
+  const isChecked = ((await indicator.textContent()) ?? '').trim().toLowerCase() === 'x';
+  if (isChecked !== checked) {
+    await button.click();
+  }
+}
+
+/**
+ * Enable the settings needed for the hook-server e2e assertions:
+ * - Watch All Sessions, so hooks-only external sessions are adopted
+ * - Always Show Labels, so the normal office view exposes stable overlay text
+ */
+export async function configureHookServerTestSettings(frame: Frame): Promise<void> {
+  const settingsButton = frame.locator('button', { hasText: 'Settings' });
+  await expect(settingsButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+  await settingsButton.click();
+
+  const settingsModal = frame
+    .locator('div.fixed')
+    .filter({ has: frame.getByText('Settings', { exact: true }) });
+  await expect(settingsModal).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+
+  await setCheckbox(settingsModal, 'Watch All Sessions', true);
+  await setCheckbox(settingsModal, 'Always Show Labels', true);
+  await setCheckbox(settingsModal, 'Debug View', false);
+
+  const closeButton = settingsModal.getByRole('button', { name: 'x', exact: true });
+  await expect(closeButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+  await closeButton.click();
+
+  await expect(settingsModal).toBeHidden({ timeout: WEBVIEW_TIMEOUT_MS });
+
+  // Allow the extension host to process the settings updates before hook events arrive.
+  await frame.waitForTimeout(500);
 }

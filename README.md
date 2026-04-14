@@ -70,6 +70,20 @@ npm run build
 
 Then press **F5** in VS Code to launch the Extension Development Host.
 
+### Browser Preview & Hosted Reports
+
+The browser-preview version of the webview can be built and staged for Vercel separately from the VS Code extension build.
+
+```bash
+npm run test
+npm run e2e
+npm run vercel:prepare
+```
+
+Run `npm run test:report` separately when you want the combined Allure report locally without preparing the full Vercel output.
+
+The staged Vercel output serves the standalone webview at `/webview/` and the Linux Allure report at `/reports/allure/`, combining the `e2e`, `server`, and `webview` suites. The GitHub Actions deploy job expects `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets.
+
 ### Usage
 
 1. Open the **Pixel Agents** panel (it appears in the bottom panel area alongside your terminal)
@@ -144,7 +158,6 @@ For this to work, the architecture needs to be modular at every level:
 - **Theme-agnostic**: community-created assets, skins, and themes from any contributor.
 
 We're actively working on the core module and adapter architecture that makes this possible. If you're interested to talk about this further, please visit our [Discussions Section](https://github.com/pablodelucca/pixel-agents/discussions).
-
 
 ## Community & Contributing
 

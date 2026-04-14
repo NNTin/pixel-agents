@@ -2,7 +2,10 @@ import path from 'path';
 
 import { defineConfig } from '@playwright/test';
 
+process.env['ALLURE_LABEL_epic'] ??= 'e2e';
+
 const artifactsDir = path.join(__dirname, '../test-results/e2e');
+const allureResultsDir = path.join(__dirname, '../allure-results/e2e');
 
 export default defineConfig({
   testDir: path.join(__dirname, 'tests'),
@@ -16,6 +19,12 @@ export default defineConfig({
         // Must be outside outputDir to avoid Playwright clearing artifacts
         outputFolder: path.join(__dirname, '../playwright-report/e2e'),
         open: 'never',
+      },
+    ],
+    [
+      'allure-playwright',
+      {
+        resultsDir: allureResultsDir,
       },
     ],
   ],
