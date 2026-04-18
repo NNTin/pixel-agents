@@ -87,3 +87,98 @@ export async function sendHookEvent(
     );
   }
 }
+
+export function sessionStartStartup(
+  sessionId: string,
+  cwd: string,
+  transcriptPath?: string,
+): HookEventPayload {
+  const event: HookEventPayload = {
+    session_id: sessionId,
+    hook_event_name: 'SessionStart',
+    source: 'startup',
+    cwd,
+  };
+  if (transcriptPath) event.transcript_path = transcriptPath;
+  return event;
+}
+
+export function sessionStartClear(
+  sessionId: string,
+  cwd: string,
+  transcriptPath?: string,
+): HookEventPayload {
+  const event: HookEventPayload = {
+    session_id: sessionId,
+    hook_event_name: 'SessionStart',
+    source: 'clear',
+    cwd,
+  };
+  if (transcriptPath) event.transcript_path = transcriptPath;
+  return event;
+}
+
+export function sessionStartResume(
+  sessionId: string,
+  cwd: string,
+  transcriptPath?: string,
+): HookEventPayload {
+  const event: HookEventPayload = {
+    session_id: sessionId,
+    hook_event_name: 'SessionStart',
+    source: 'resume',
+    cwd,
+  };
+  if (transcriptPath) event.transcript_path = transcriptPath;
+  return event;
+}
+
+export function preToolUseBash(sessionId: string, command: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'PreToolUse',
+    tool_name: 'Bash',
+    tool_input: {
+      command,
+    },
+  };
+}
+
+export function permissionRequest(sessionId: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'PermissionRequest',
+  };
+}
+
+export function idlePrompt(sessionId: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'Notification',
+    notification_type: 'idle_prompt',
+  };
+}
+
+export function sessionEndExit(sessionId: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'SessionEnd',
+    reason: 'exit',
+  };
+}
+
+export function sessionEndClear(sessionId: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'SessionEnd',
+    reason: 'clear',
+  };
+}
+
+export function sessionEndResume(sessionId: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'SessionEnd',
+    reason: 'resume',
+  };
+}

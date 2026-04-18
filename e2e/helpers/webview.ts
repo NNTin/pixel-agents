@@ -5,6 +5,13 @@ const WEBVIEW_TIMEOUT_MS = 30_000;
 const PANEL_OPEN_TIMEOUT_MS = 15_000;
 const MIN_PANEL_HEIGHT_PX = 320;
 
+export interface WebviewSettings {
+  watchAllSessions?: boolean;
+  hooksEnabled?: boolean;
+  alwaysShowLabels?: boolean;
+  debugView?: boolean;
+}
+
 async function runCommand(window: Page, command: string): Promise<void> {
   // Retry the full command palette interaction up to 3 times.
   // macOS CI can swallow keypresses or fail to populate results.
@@ -138,12 +145,7 @@ async function setCheckbox(modal: Locator, label: string, checked: boolean): Pro
   }
 }
 
-/**
- * Enable the settings needed for the hook-server e2e assertions:
- * - Watch All Sessions, so hooks-only external sessions are adopted
- * - Always Show Labels, so the normal office view exposes stable overlay text
- */
-export async function configureHookServerTestSettings(frame: Frame): Promise<void> {
+async function openSettingsModal(frame: Frame): Promise<Locator> {
   const settingsButton = frame.locator('button', { hasText: 'Settings' });
   await expect(settingsButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
   await settingsButton.click();
@@ -152,17 +154,48 @@ export async function configureHookServerTestSettings(frame: Frame): Promise<voi
     .locator('div.fixed')
     .filter({ has: frame.getByText('Settings', { exact: true }) });
   await expect(settingsModal).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
+  return settingsModal;
+}
 
-  await setCheckbox(settingsModal, 'Watch All Sessions', true);
-  await setCheckbox(settingsModal, 'Always Show Labels', true);
-  await setCheckbox(settingsModal, 'Debug View', false);
-
+async function closeSettingsModal(settingsModal: Locator): Promise<void> {
   const closeButton = settingsModal.getByRole('button', { name: 'x', exact: true });
   await expect(closeButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
   await closeButton.click();
-
   await expect(settingsModal).toBeHidden({ timeout: WEBVIEW_TIMEOUT_MS });
+}
 
-  // Allow the extension host to process the settings updates before hook events arrive.
+export async function setSettings(frame: Frame, settings: WebviewSettings): Promise<void> {
+  const settingsModal = await openSettingsModal(frame);
+
+  if (settings.watchAllSessions !== undefined) {
+    await setCheckbox(settingsModal, 'Watch All Sessions', settings.watchAllSessions);
+  }
+  if (settings.hooksEnabled !== undefined) {
+    await setCheckbox(settingsModal, 'Instant Detection (Hooks)', settings.hooksEnabled);
+  }
+  if (settings.alwaysShowLabels !== undefined) {
+    await setCheckbox(settingsModal, 'Always Show Labels', settings.alwaysShowLabels);
+  }
+  if (settings.debugView !== undefined) {
+    await setCheckbox(settingsModal, 'Debug View', settings.debugView);
+  }
+
+  await closeSettingsModal(settingsModal);
+
+  // Allow the extension host to process settings updates before the test continues.
   await frame.waitForTimeout(500);
+}
+
+/**
+ * Enable the settings needed for the hook-server e2e assertions:
+ * - Watch All Sessions, so hooks-only external sessions are adopted
+ * - Always Show Labels, so the normal office view exposes stable overlay text
+ */
+export async function configureHookServerTestSettings(frame: Frame): Promise<void> {
+  await setSettings(frame, {
+    watchAllSessions: true,
+    hooksEnabled: true,
+    alwaysShowLabels: true,
+    debugView: false,
+  });
 }
