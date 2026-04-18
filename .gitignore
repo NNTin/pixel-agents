@@ -39,3 +39,4 @@ allure-report/
 # Local notes (not for commit)
 /notes/
 /docs/e2e-*.md
+!/docs/e2e-claude-mocking.md
