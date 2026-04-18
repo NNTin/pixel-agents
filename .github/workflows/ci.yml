@@ -190,10 +190,10 @@ jobs:
           exit "$failed"
 
   e2e:
-    needs: ci
     strategy:
       fail-fast: false
       matrix:
+        # TODO: windows-latest runs by far longest. When we have more e2e tests look into parallizing windows tests in a matrix
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -304,7 +304,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-preview-precheck:
-    needs: e2e
+    needs:
+      - ci
+      - e2e
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.deploy_precheck.outputs.ready }}
