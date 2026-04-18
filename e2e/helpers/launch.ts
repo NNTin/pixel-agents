@@ -8,6 +8,7 @@ const REPO_ROOT = path.join(__dirname, '../..');
 const VSCODE_PATH_FILE = path.join(REPO_ROOT, '.vscode-test/vscode-executable.txt');
 const MOCK_CLAUDE_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude');
 const MOCK_CLAUDE_CMD_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude.cmd');
+const MOCK_CLAUDE_RUNNER_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude-runner.cjs');
 const ARTIFACTS_DIR = path.join(REPO_ROOT, 'test-results/e2e');
 const IS_WINDOWS = process.platform === 'win32';
 const PATH_SEP = IS_WINDOWS ? ';' : ':';
@@ -73,13 +74,15 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
   }
 
   // Copy mock-claude into an isolated bin dir
+  const mockClaudeBinaryPath = path.join(mockBinDir, IS_WINDOWS ? 'claude.cmd' : 'claude');
   if (IS_WINDOWS) {
     // Windows: copy the .cmd batch file as 'claude.cmd'
-    fs.copyFileSync(MOCK_CLAUDE_CMD_PATH, path.join(mockBinDir, 'claude.cmd'));
+    fs.copyFileSync(MOCK_CLAUDE_CMD_PATH, mockClaudeBinaryPath);
+    fs.copyFileSync(MOCK_CLAUDE_RUNNER_PATH, path.join(mockBinDir, 'mock-claude-runner.cjs'));
   } else {
-    const mockDest = path.join(mockBinDir, 'claude');
-    fs.copyFileSync(MOCK_CLAUDE_PATH, mockDest);
-    fs.chmodSync(mockDest, 0o755);
+    fs.copyFileSync(MOCK_CLAUDE_PATH, mockClaudeBinaryPath);
+    fs.chmodSync(mockClaudeBinaryPath, 0o755);
+    fs.copyFileSync(MOCK_CLAUDE_RUNNER_PATH, path.join(mockBinDir, 'mock-claude-runner.cjs'));
   }
 
   // macOS: VS Code's integrated terminal resolves PATH from the login shell,
@@ -100,6 +103,8 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
               env: {
                 PATH: `${mockBinDir}:/usr/local/bin:/usr/bin:/bin`,
                 HOME: tmpHome,
+                PIXEL_AGENTS_E2E_CLAUDE_BIN: mockClaudeBinaryPath,
+                PIXEL_AGENTS_NODE_BIN: process.execPath,
                 ZDOTDIR: tmpHome,
               },
             },
@@ -114,6 +119,7 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
   }
 
   const mockLogFile = path.join(tmpHome, '.claude-mock', 'invocations.log');
+  const launchLogFile = path.join(tmpHome, '.claude-mock', 'launch.log');
 
   // --- Video output dir ---
   const safeTitle = testTitle.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
@@ -128,6 +134,9 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
     HOME: tmpHome,
     // Prepend mock bin so 'claude' resolves to our mock
     PATH: `${mockBinDir}${PATH_SEP}${process.env['PATH'] ?? '/usr/local/bin:/usr/bin:/bin'}`,
+    PIXEL_AGENTS_E2E_CLAUDE_BIN: mockClaudeBinaryPath,
+    PIXEL_AGENTS_E2E_LAUNCH_LOG: launchLogFile,
+    PIXEL_AGENTS_NODE_BIN: process.execPath,
     // Prevent VS Code from trying to talk to real accounts / telemetry
     VSCODE_TELEMETRY_DISABLED: '1',
   };

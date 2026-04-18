@@ -5,12 +5,16 @@ import {
   idlePrompt,
   permissionRequest,
   preToolUseBash,
-  sendHookEvent,
   sessionEndExit,
   sessionStartStartup,
-  waitForHookServer,
 } from '../../helpers/hooks';
 import { spawnInternalAgentAndWait } from '../../helpers/internal-agent';
+import {
+  arrangeNextClaudeInvocation,
+  claudeScenario,
+  spawnExternalClaudeScenario,
+  waitForClaudeHookSetup,
+} from '../../helpers/mock-claude';
 import { expectOverlayCount, expectOverlayVisible } from '../../helpers/office';
 import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
 
@@ -25,6 +29,7 @@ test.describe('Hooks ON / Basic', () => {
       debugView: false,
     });
 
+    await arrangeNextClaudeInvocation(tmpHome, claudeScenario('A1 internal basic spawn').build());
     const spawned = await spawnInternalAgentAndWait(frame, tmpHome, mockLogFile);
 
     expect(spawned.invocationLog).toContain(`session-id=${spawned.sessionId}`);
@@ -48,24 +53,43 @@ test.describe('Hooks ON / Basic', () => {
       debugView: false,
     });
 
-    const serverConfig = await waitForHookServer(tmpHome);
+    await waitForClaudeHookSetup(tmpHome);
     const sessionId = 'a7-external-session';
+    const scenario = claudeScenario('A7 external hook session smoke')
+      .at(200)
+      .emitHook(
+        sessionStartStartup(sessionId, '{{cwd}}', '{{transcriptPath}}') as Record<string, unknown>,
+      )
+      .at(2_000)
+      .emitHook(preToolUseBash(sessionId, 'npm test') as Record<string, unknown>)
+      .at(3_200)
+      .emitHook(permissionRequest(sessionId) as Record<string, unknown>)
+      .at(4_400)
+      .emitHook(idlePrompt(sessionId) as Record<string, unknown>)
+      .at(6_000)
+      .emitHook(sessionEndExit(sessionId) as Record<string, unknown>)
+      .exitAt(6_200)
+      .build();
 
-    await sendHookEvent(serverConfig, sessionStartStartup(sessionId, workspaceDir));
+    await spawnExternalClaudeScenario({
+      tmpHome,
+      workspaceDir,
+      mockLogFile: pixelAgents.mockLogFile,
+      scenario,
+      sessionId,
+    });
+
     await frame.waitForTimeout(500);
     await expectOverlayCount(frame, 0);
 
-    await sendHookEvent(serverConfig, preToolUseBash(sessionId, 'npm test'));
     await expectOverlayCount(frame, 1);
+    // TODO: observed flaky test failure, however I cannot reliably reproduce
     await expectOverlayVisible(frame, 'Running: npm test');
 
-    await sendHookEvent(serverConfig, permissionRequest(sessionId));
     await expectOverlayVisible(frame, 'Needs approval');
 
-    await sendHookEvent(serverConfig, idlePrompt(sessionId));
     await expectOverlayVisible(frame, 'Might be waiting for input');
 
-    await sendHookEvent(serverConfig, sessionEndExit(sessionId));
     await expectOverlayCount(frame, 0);
   });
 });

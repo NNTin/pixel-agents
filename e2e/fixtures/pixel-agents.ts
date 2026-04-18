@@ -70,6 +70,18 @@ export const test = base.extend<{ pixelAgents: PixelAgentsContext }>({
       await attachTextFileIfExists(testInfo, 'mock-claude-invocations', mockLogFile, 'text/plain');
       await attachTextFileIfExists(
         testInfo,
+        'mock-claude-actions',
+        path.join(tmpHome, '.claude-mock', 'actions.log'),
+        'text/plain',
+      );
+      await attachTextFileIfExists(
+        testInfo,
+        'launch-log',
+        path.join(tmpHome, '.claude-mock', 'launch.log'),
+        'text/plain',
+      );
+      await attachTextFileIfExists(
+        testInfo,
         'server-json',
         path.join(tmpHome, '.pixel-agents', 'server.json'),
         'application/json',

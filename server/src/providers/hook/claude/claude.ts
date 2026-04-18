@@ -101,7 +101,12 @@ function buildLaunchCommand(
 ): { command: string; args: string[]; env?: Record<string, string> } {
   const args = ['--session-id', sessionId];
   if (opts?.bypassPermissions) args.push('--dangerously-skip-permissions');
-  return { command: 'claude', args, env: { PWD: cwd } };
+  return {
+    // PIXEL_AGENTS_E2E_CLAUDE_BIN contains mocked claude for e2e tests
+    command: process.env['PIXEL_AGENTS_E2E_CLAUDE_BIN'] || 'claude',
+    args,
+    env: { PWD: cwd },
+  };
 }
 
 /** Root that holds every Claude session across all workspaces. Used by the
