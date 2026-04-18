@@ -357,6 +357,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+      issues: write
       pull-requests: write
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -445,7 +446,7 @@ jobs:
             echo "- Linux Allure report: $base_url/reports/allure/"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Comment preview URL on PR
+      - name: Create or update preview comment on PR
         if: github.event_name == 'pull_request' && steps.deploy_vercel.outcome == 'success'
         shell: bash
         env:
@@ -455,9 +456,34 @@ jobs:
           DEPLOYMENT_URL: ${{ steps.deploy_vercel.outputs.deployment_url }}
         run: |
           base_url="${DEPLOYMENT_URL%/}"
-          gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body "$(cat <<EOF
+          comment_body="$(cat <<EOF
+          <!-- pixel-agents-vercel-preview -->
           🔍 Vercel Preview: $base_url
-          - Webview preview: $base_url/webview/
-          - Linux Allure report: $base_url/reports/allure/
+
+          Webview preview: $base_url/webview/
+          Linux Allure report: $base_url/reports/allure/
           EOF
           )"
+
+          existing_comment_id="$(
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$GH_REPO/issues/$PR_NUMBER/comments" \
+              --paginate \
+              --jq '.[] | select(.user.login == "github-actions[bot]") | select((.body // "") | contains("<!-- pixel-agents-vercel-preview -->") or contains("🔍 Vercel Preview:")) | .id' \
+              | tail -n 1
+          )"
+
+          if [ -n "$existing_comment_id" ]; then
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$GH_REPO/issues/comments/$existing_comment_id" \
+              -f body="$comment_body" >/dev/null
+          else
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$GH_REPO/issues/$PR_NUMBER/comments" \
+              -f body="$comment_body" >/dev/null
+          fi
