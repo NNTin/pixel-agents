@@ -4,6 +4,7 @@
 .vscode-test/**
 **/node_modules/**
 out/**
+sprites-export/**
 logs/**
 sprites-export/**
 .github/**
