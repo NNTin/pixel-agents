@@ -1,5 +1,5 @@
-import { expect } from '@playwright/test';
 import type { Frame, Locator } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 const OVERLAY_TIMEOUT_MS = 15_000;
 
@@ -9,6 +9,13 @@ export function getAgentOverlays(frame: Frame): Locator {
 
 export function getOverlayByText(frame: Frame, text: string): Locator {
   return getAgentOverlays(frame).filter({ hasText: text });
+}
+
+export function getOverlayByTexts(frame: Frame, texts: string[]): Locator {
+  return texts.reduce<Locator>(
+    (locator, text) => locator.filter({ hasText: text }),
+    getAgentOverlays(frame),
+  );
 }
 
 export async function expectOverlayCount(
@@ -27,8 +34,24 @@ export async function expectOverlayVisible(
   await expect(getOverlayByText(frame, text).first()).toBeVisible({ timeout });
 }
 
+export async function expectOverlayVisibleWithTexts(
+  frame: Frame,
+  texts: string[],
+  timeout = OVERLAY_TIMEOUT_MS,
+): Promise<void> {
+  await expect(getOverlayByTexts(frame, texts).first()).toBeVisible({ timeout });
+}
+
 export async function expectNoOverlay(frame: Frame, text: string, timeout = 1_000): Promise<void> {
   await expect(getOverlayByText(frame, text)).toHaveCount(0, { timeout });
+}
+
+export async function expectNoOverlayWithTexts(
+  frame: Frame,
+  texts: string[],
+  timeout = 1_000,
+): Promise<void> {
+  await expect(getOverlayByTexts(frame, texts)).toHaveCount(0, { timeout });
 }
 
 export async function readAgentOverlayIds(frame: Frame): Promise<number[]> {

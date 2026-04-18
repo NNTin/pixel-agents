@@ -144,6 +144,30 @@ export function preToolUseBash(sessionId: string, command: string): HookEventPay
   };
 }
 
+export function preToolUseAgent(
+  sessionId: string,
+  description: string,
+  runInBackground = true,
+): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'PreToolUse',
+    tool_name: 'Agent',
+    tool_input: {
+      description,
+      run_in_background: runInBackground,
+    },
+  };
+}
+
+export function subagentStart(sessionId: string, agentType: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'SubagentStart',
+    agent_type: agentType,
+  };
+}
+
 export function permissionRequest(sessionId: string): HookEventPayload {
   return {
     session_id: sessionId,
