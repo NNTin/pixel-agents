@@ -248,7 +248,8 @@ jobs:
       - name: E2E Tests
         id: e2e_test
         if: steps.install_playwright_deps.outcome == 'success'
-        run: npm run e2e
+        # TODO: remove attach video on success, for debugging purpose only
+        run: npm run e2e -- --attach-videos-on-success
         continue-on-error: true
 
       - name: Upload E2E Artifacts
