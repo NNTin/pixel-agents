@@ -693,7 +693,6 @@ export class HookEventHandler {
   private markAgentWaiting(agent: AgentState, agentId: number): void {
     cancelWaitingTimer(agentId, this.waitingTimers);
     cancelPermissionTimer(agentId, this.permissionTimers);
-    const hadHookOnlyTool = !!agent.currentHookToolId;
     agent.currentHookToolId = undefined;
 
     // Clear foreground tools, preserve background agents (same logic as turn_duration handler).
