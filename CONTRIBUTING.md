@@ -17,8 +17,6 @@ This project is licensed under the [MIT License](LICENSE), so your contributions
 git clone https://github.com/pablodelucca/pixel-agents.git
 cd pixel-agents
 npm install
-cd webview-ui && npm install && cd ..
-cd server && npm install && cd ..
 npm run build
 ```
 
@@ -60,8 +58,7 @@ You can run the mocked Pixel Agent web app either from the CLI or from VS Code t
 From the repository root:
 
 ```bash
-cd webview-ui
-npm run dev
+npm run dev -w webview-ui
 ```
 
 Vite will print a local URL (typically `http://localhost:5173`) where the mocked app is available.

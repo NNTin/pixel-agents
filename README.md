@@ -64,7 +64,6 @@ If you just want to use Pixel Agents, the easiest way is to download the [VS Cod
 git clone https://github.com/pablodelucca/pixel-agents.git
 cd pixel-agents
 npm install
-cd webview-ui && npm install && cd ..
 npm run build
 ```
 

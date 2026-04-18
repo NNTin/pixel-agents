@@ -198,7 +198,7 @@ Toggle via "Layout" button. Tools: SELECT (default), Floor paint, Wall paint, Er
 ## Build & Dev
 
 ```sh
-npm install && cd webview-ui && npm install && cd ../server && npm install && cd .. && npm run build
+npm install && npm run build
 ```
 
 Build: type-check → lint → esbuild (extension) → vite (webview). F5 for Extension Dev Host.
