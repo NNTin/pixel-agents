@@ -146,11 +146,17 @@ The `e2e/` directory contains Playwright tests that launch a real VS Code instan
 # Build the extension first (tests load the compiled output)
 npm run build
 
-# Runs the e2e test
+# Runs the e2e tests
 npm run e2e
 
 # Step-by-step debug mode
 npm run e2e:debug
+
+# Keep and attach videos even for successful tests
+npm run e2e -- --attach-videos-on-success
+
+# Combine debugger + success-case videos
+npm run e2e:debug -- --attach-videos-on-success
 ```
 
 On the first run, `@vscode/test-electron` will download a stable VS Code release into `.vscode-test/` (≈200 MB). Subsequent runs reuse the cache.
@@ -161,11 +167,11 @@ All test artifacts are written to `test-results/e2e/`:
 
 | Path                                   | Contents                                                                    |
 | -------------------------------------- | --------------------------------------------------------------------------- |
-| `test-results/e2e/videos/<test-name>/` | `.webm` screen recording for every test                                     |
+| `test-results/e2e/videos/<test-name>/` | `.webm` screen recording for failed tests, or all tests with the debug flag |
 | `playwright-report/e2e/`               | Playwright HTML report (`npx playwright show-report playwright-report/e2e`) |
 | `test-results/e2e/*.png`               | Final screenshots saved on failure                                          |
 
-On failure, the test output prints the path to the video for that run.
+By default, successful tests discard their videos after teardown. Pass `--attach-videos-on-success` when you need success-case recordings attached to the report for debugging.
 
 ### Mock claude
 

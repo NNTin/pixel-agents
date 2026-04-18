@@ -76,6 +76,7 @@ The browser-preview version of the webview can be built and staged for Vercel se
 ```bash
 npm run test
 npm run e2e
+npm run e2e -- --attach-videos-on-success
 npm run vercel:prepare
 ```
 

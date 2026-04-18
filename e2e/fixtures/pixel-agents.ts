@@ -6,6 +6,8 @@ import path from 'path';
 import { launchVSCode, type VSCodeSession, waitForWorkbench } from '../helpers/launch';
 import { getPixelAgentsFrame, openPixelAgentsPanel } from '../helpers/webview';
 
+const ATTACH_VIDEOS_ON_SUCCESS = process.env['PIXEL_AGENTS_E2E_ATTACH_VIDEOS_ON_SUCCESS'] === '1';
+
 export interface PixelAgentsContext {
   session: VSCodeSession;
   window: Page;
@@ -29,6 +31,19 @@ async function attachTextFileIfExists(
     });
   } catch {
     // Attachment failures are non-fatal in teardown.
+  }
+}
+
+function shouldAttachRunVideo(testInfo: TestInfo): boolean {
+  return ATTACH_VIDEOS_ON_SUCCESS || testInfo.status !== 'passed';
+}
+
+function removeDirIfExists(dirPath: string | undefined): void {
+  try {
+    if (!dirPath || !fs.existsSync(dirPath)) return;
+    fs.rmSync(dirPath, { recursive: true, force: true });
+  } catch {
+    // Artifact cleanup failures are non-fatal in teardown.
   }
 }
 
@@ -71,9 +86,10 @@ export const test = base.extend<{ pixelAgents: PixelAgentsContext }>({
         // Screenshot failures are non-fatal in teardown.
       }
 
+      const attachRunVideo = runVideo !== null && shouldAttachRunVideo(testInfo);
       await session.cleanup();
 
-      if (runVideo) {
+      if (attachRunVideo && runVideo) {
         try {
           const videoPath = testInfo.outputPath('run-video.webm');
           await runVideo.saveAs(videoPath);
@@ -84,6 +100,8 @@ export const test = base.extend<{ pixelAgents: PixelAgentsContext }>({
         } catch {
           // Video attachment failures are non-fatal in teardown.
         }
+      } else {
+        removeDirIfExists(session.videoDir);
       }
     }
   },

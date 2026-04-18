@@ -21,6 +21,8 @@ export interface VSCodeSession {
   workspaceDir: string;
   /** Path to the mock invocations log. */
   mockLogFile: string;
+  /** Raw Playwright video directory for this test run, if recording is enabled. */
+  videoDir?: string;
   cleanup: () => Promise<void>;
 }
 
@@ -115,8 +117,10 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
 
   // --- Video output dir ---
   const safeTitle = testTitle.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-  const videoDir = path.join(ARTIFACTS_DIR, 'videos', safeTitle);
-  fs.mkdirSync(videoDir, { recursive: true });
+  const videoDir = IS_WINDOWS ? undefined : path.join(ARTIFACTS_DIR, 'videos', safeTitle);
+  if (videoDir) {
+    fs.mkdirSync(videoDir, { recursive: true });
+  }
 
   // --- Environment for VS Code process ---
   const env: Record<string, string> = {
@@ -193,7 +197,7 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
     };
     if (!IS_WINDOWS) {
       launchOptions.recordVideo = {
-        dir: videoDir,
+        dir: videoDir!,
         size: { width: 1280, height: 800 },
       };
     }
@@ -214,7 +218,15 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
       await window.waitForTimeout(500);
     }
 
-    return { app, window, tmpHome, workspaceDir: resolvedWorkspaceDir, mockLogFile, cleanup };
+    return {
+      app,
+      window,
+      tmpHome,
+      workspaceDir: resolvedWorkspaceDir,
+      mockLogFile,
+      videoDir,
+      cleanup,
+    };
   } catch (error) {
     await cleanup();
     throw error;
