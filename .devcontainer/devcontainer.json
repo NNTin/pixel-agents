@@ -26,12 +26,12 @@
       }
     }
   },
-  // Install all npm dependencies and the VSIX packaging tool once on container creation.
+  // Install workspace dependencies and build a VSIX once when the container is created.
   // Claude Code CLI is intentionally omitted — install it manually after the container starts.
-  "postCreateCommand": "npm install && cd webview-ui && npm install && cd ../server && npm install && cd .. && npm install -g @vscode/vsce",
-  // On every client attach: build a production VSIX and install it into the running VS Code
-  // Server so the extension is active in the primary window (not just the F5 dev host).
-  "postAttachCommand": "npm run package 2>/dev/null && vsce package --no-dependencies 2>/dev/null && VSIX=$(ls pixel-agents-*.vsix 2>/dev/null | head -1) && [ -n \"$VSIX\" ] && code --install-extension \"$VSIX\" --force || true",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  // Install the packaged extension into the remote VS Code server only when it is
+  // missing or the installed version differs from package.json.
+  "postAttachCommand": "bash .devcontainer/post-attach.sh",
   "forwardPorts": [5173],
   // Persist ~/.claude/ (credentials and session JSONL files) across container rebuilds.
   "mounts": [
