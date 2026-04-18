@@ -208,6 +208,8 @@ export async function initBrowserMock(): Promise<void> {
     }
   }
 
+  // TODO: decoding takes a noticeable amounf of time, page is in that duration white and unresponsive.
+  // Consider showing a loading spinner or build the decoded assets into the app bundle instead of fetching at runtime.
   const [characters, floorSprites, wallSets, furnitureSprites] = hasDecoded
     ? [decodedCharacters!, decodedFloors!, decodedWalls!, decodedFurniture!]
     : await Promise.all([
