@@ -48,17 +48,6 @@ export interface PlacedFurniture {
   color?: ColorValue;
 }
 
-/** Floor color for a specific tile */
-export interface FloorColor {
-  tileIndex: number;
-  pattern: number;
-  h: number;
-  s: number;
-  b: number;
-  c: number;
-  colorize?: boolean;
-}
-
 /** Complete office layout data */
 export interface OfficeLayout {
   version: number;
@@ -66,7 +55,7 @@ export interface OfficeLayout {
   rows: number;
   tiles: number[];
   furniture: PlacedFurniture[];
-  tileColors?: FloorColor[];
+  tileColors?: Array<ColorValue | null>;
 }
 
 // ── Sprites & Assets ─────────────────────────────────────────

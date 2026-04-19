@@ -16,7 +16,6 @@ export type {
   AgentMeta,
   ColorValue,
   Disposable,
-  FloorColor,
   FurnitureCatalogEntry,
   HookEvent,
   OfficeLayout,
