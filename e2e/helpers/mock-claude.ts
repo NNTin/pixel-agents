@@ -38,6 +38,12 @@ export interface ClaudeMockWriteJsonAction {
   value: Record<string, unknown>;
 }
 
+export interface ClaudeMockDeletePathAction {
+  kind: 'deletePath';
+  atMs: number;
+  filePath: string;
+}
+
 export interface ClaudeMockExitAction {
   kind: 'exit';
   atMs: number;
@@ -48,6 +54,7 @@ export type ClaudeMockAction =
   | ClaudeMockAppendJsonlAction
   | ClaudeMockEmitHookAction
   | ClaudeMockWriteJsonAction
+  | ClaudeMockDeletePathAction
   | ClaudeMockExitAction;
 
 export interface ClaudeMockScenario {
@@ -93,6 +100,15 @@ class TimedScenarioStepBuilder {
       atMs: this.atMs,
       filePath,
       value,
+    });
+    return this.scenario;
+  }
+
+  deletePath(filePath: string): ClaudeMockScenarioBuilder {
+    this.scenario.pushAction({
+      kind: 'deletePath',
+      atMs: this.atMs,
+      filePath,
     });
     return this.scenario;
   }

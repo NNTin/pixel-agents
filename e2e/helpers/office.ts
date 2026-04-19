@@ -108,3 +108,46 @@ export async function expectSingleAgentOverlay(frame: Frame): Promise<number> {
   }
   return ids[0]!;
 }
+
+export async function closeAgentFromOverlay(
+  frame: Frame,
+  options: { agentId?: number; text?: string },
+  timeout = OVERLAY_TIMEOUT_MS,
+): Promise<void> {
+  const overlay =
+    options.agentId !== undefined
+      ? getOverlayByAgentId(frame, options.agentId).first()
+      : getOverlayByText(frame, options.text ?? '').first();
+  await expect(overlay).toBeVisible({ timeout });
+
+  const canvas = frame.locator('canvas');
+  const canvasBox = await canvas.boundingBox();
+  const overlayBox = await overlay.boundingBox();
+  if (!canvasBox || !overlayBox) {
+    throw new Error('Missing canvas or overlay bounding box while closing agent');
+  }
+
+  const clickX = overlayBox.x - canvasBox.x + overlayBox.width / 2;
+  const clickOffsets = [overlayBox.height + 16, overlayBox.height + 28, 60];
+
+  for (const clickOffset of clickOffsets) {
+    const clickY = Math.min(canvasBox.height - 4, overlayBox.y - canvasBox.y + clickOffset);
+    await canvas.click({
+      position: {
+        x: clickX,
+        y: clickY,
+      },
+    });
+
+    const closeButton = overlay.locator('button[title="Close agent"]');
+    try {
+      await expect(closeButton).toBeVisible({ timeout: 1_500 });
+      await closeButton.click();
+      return;
+    } catch {
+      // Retry with a slightly different hit position if the first click missed the sprite.
+    }
+  }
+
+  throw new Error('Failed to select agent overlay before attempting close');
+}

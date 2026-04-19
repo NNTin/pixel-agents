@@ -119,6 +119,10 @@ function writeJsonFile(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function deletePathTarget(filePath) {
+  fs.rmSync(filePath, { recursive: true, force: true });
+}
+
 function readSettings(homeDir) {
   try {
     const raw = fs.readFileSync(path.join(homeDir, '.claude', 'settings.json'), 'utf8');
@@ -347,6 +351,13 @@ async function playScenario(homeDir, scenario, context) {
         homeDir,
         `writeJson ${path.basename(filePath)} ${JSON.stringify({ filePath, value })}`,
       );
+      continue;
+    }
+
+    if (action.kind === 'deletePath') {
+      const filePath = resolveTemplateString(action.filePath, context);
+      deletePathTarget(filePath);
+      logAction(homeDir, `deletePath ${JSON.stringify({ filePath })}`);
       continue;
     }
 

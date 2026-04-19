@@ -226,4 +226,34 @@ describe('mock-claude-runner hook execution', () => {
       members: [{ name: 'lead' }],
     });
   });
+
+  it('deletes configured paths with template values', async () => {
+    writeScenarioQueue(tmpHome, [
+      {
+        schemaVersion: 1,
+        autoInit: true,
+        holdOpenMs: 0,
+        sessions: [],
+        actions: [
+          {
+            kind: 'deletePath',
+            atMs: 0,
+            filePath: '{{transcriptPath}}',
+          },
+        ],
+      },
+    ]);
+
+    const { code, stderr } = await runMockClaude('delete-session');
+
+    expect(code, stderr).toBe(0);
+    const transcriptPath = path.join(
+      tmpHome,
+      '.claude',
+      'projects',
+      workspaceDir.replace(/[^a-zA-Z0-9-]/g, '-'),
+      'delete-session.jsonl',
+    );
+    expect(fs.existsSync(transcriptPath)).toBe(false);
+  });
 });

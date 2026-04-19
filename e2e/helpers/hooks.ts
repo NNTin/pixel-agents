@@ -175,11 +175,40 @@ export function permissionRequest(sessionId: string): HookEventPayload {
   };
 }
 
+export function notificationPermissionPrompt(sessionId: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'Notification',
+    notification_type: 'permission_prompt',
+  };
+}
+
 export function idlePrompt(sessionId: string): HookEventPayload {
   return {
     session_id: sessionId,
     hook_event_name: 'Notification',
     notification_type: 'idle_prompt',
+  };
+}
+
+export function teammateIdle(sessionId: string, agentType: string): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'TeammateIdle',
+    agent_type: agentType,
+  };
+}
+
+export function taskCompleted(
+  sessionId: string,
+  agentType: string,
+  subject = 'Task completed',
+): HookEventPayload {
+  return {
+    session_id: sessionId,
+    hook_event_name: 'TaskCompleted',
+    agent_type: agentType,
+    subject,
   };
 }
 

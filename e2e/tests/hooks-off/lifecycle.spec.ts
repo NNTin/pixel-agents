@@ -1,31 +1,35 @@
 import { expect, test } from '../../fixtures/pixel-agents';
 import {
+  spawnInternalAgentAndWait,
+  spawnInternalAgentAndWaitForInvocation,
+} from '../../helpers/internal-agent';
+import {
   INLINE_TEAMMATE_ALIAS,
   INLINE_TEAMMATE_ROLE,
   uniqueTeamName,
   withInlineTeammateSession,
 } from '../../helpers/lifecycle';
 import {
-  spawnInternalAgentAndWait,
-  spawnInternalAgentAndWaitForInvocation,
-} from '../../helpers/internal-agent';
-import {
   arrangeNextClaudeInvocation,
   claudeScenario,
   mockClaudeInitRecord,
+  spawnExternalClaudeScenario,
 } from '../../helpers/mock-claude';
 import {
+  closeAgentFromOverlay,
   expectNoOverlay,
   expectNoOverlayWithTexts,
   expectOverlayCount,
   expectOverlayVisible,
+  expectOverlayVisibleForAgent,
   expectOverlayVisibleWithTexts,
   expectSingleAgentOverlay,
   readAgentOverlayIds,
+  readAgentOverlayTexts,
 } from '../../helpers/office';
 import {
-  buildAssistantToolUseRecord,
   buildAssistantToolUseBatchRecord,
+  buildAssistantToolUseRecord,
   buildClearCommandRecord,
   buildTeamConfig,
   buildTeamMetadataRecord,
@@ -36,6 +40,14 @@ import {
 import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
 
 const PARALLEL_PARENT_TOOL_ID = 'toolu-b5-parent';
+
+function otherOverlayId(ids: number[], knownId: number): number {
+  const otherId = ids.find((id) => id !== knownId);
+  if (otherId === undefined) {
+    throw new Error(`Expected an overlay id other than ${knownId}, got ${JSON.stringify(ids)}`);
+  }
+  return otherId;
+}
 
 test.describe('Hooks OFF / Lifecycle', () => {
   test('B1 internal clear reassignment', async ({ pixelAgents }) => {
@@ -79,7 +91,7 @@ test.describe('Hooks OFF / Lifecycle', () => {
 
     await spawnInternalAgentAndWait(frame, tmpHome, mockLogFile);
     await openPixelAgentsPanel(window);
-    const panelFrame = await getPixelAgentsFrame(window);
+    let panelFrame = await getPixelAgentsFrame(window);
     const originalAgentId = await expectSingleAgentOverlay(panelFrame);
 
     await expectOverlayVisible(panelFrame, 'Running: npm test', 12_000);
@@ -123,12 +135,143 @@ test.describe('Hooks OFF / Lifecycle', () => {
 
     await spawnInternalAgentAndWaitForInvocation(frame, tmpHome, workspaceDir, mockLogFile);
     await openPixelAgentsPanel(window);
-    const panelFrame = await getPixelAgentsFrame(window);
+    let panelFrame = await getPixelAgentsFrame(window);
     const originalAgentId = await expectSingleAgentOverlay(panelFrame);
 
     await expectOverlayVisible(panelFrame, 'Running: npm test', 16_000);
     await expectOverlayCount(panelFrame, 1);
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
+  });
+
+  test('B2 clear edge with another agent in the same projectDir', async ({ pixelAgents }) => {
+    const { frame, window, tmpHome, mockLogFile } = pixelAgents;
+
+    await setSettings(frame, {
+      watchAllSessions: false,
+      hooksEnabled: false,
+      alwaysShowLabels: true,
+      debugView: false,
+    });
+
+    await arrangeNextClaudeInvocation(
+      tmpHome,
+      claudeScenario('B2 sibling internal agent hooks off')
+        .at(2_500)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b2-sibling', 'Bash', {
+            command: 'npm run sibling',
+          }),
+        )
+        .holdOpenFor(12_000)
+        .build(),
+    );
+
+    await spawnInternalAgentAndWait(frame, tmpHome, mockLogFile);
+    await openPixelAgentsPanel(window);
+    let panelFrame = await getPixelAgentsFrame(window);
+    const siblingAgentId = await expectSingleAgentOverlay(panelFrame);
+
+    await arrangeNextClaudeInvocation(
+      tmpHome,
+      claudeScenario('B2 internal clear with sibling present hooks off')
+        .defineSession('replacement', '{{sessionId}}-clear')
+        .at(3_500)
+        .appendJsonl(mockClaudeInitRecord('mock-claude-b2-clear-ready'), {
+          session: 'replacement',
+        })
+        .at(3_550)
+        .appendJsonl(buildClearCommandRecord(), {
+          session: 'replacement',
+        })
+        .at(4_500)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b2-fresh', 'Bash', {
+            command: 'npm run cleared',
+          }),
+          { session: 'replacement' },
+        )
+        .at(5_100)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b2-stale', 'Bash', {
+            command: 'npm run stale',
+          }),
+        )
+        .holdOpenFor(8_000)
+        .build(),
+    );
+
+    await spawnInternalAgentAndWait(panelFrame, tmpHome, mockLogFile);
+    await openPixelAgentsPanel(window);
+    panelFrame = await getPixelAgentsFrame(window);
+    await expectOverlayCount(panelFrame, 2, 12_000);
+    const clearingAgentId = otherOverlayId(await readAgentOverlayIds(panelFrame), siblingAgentId);
+
+    await expectOverlayVisibleForAgent(panelFrame, clearingAgentId, 'Running: npm run cleared');
+    await expectNoOverlay(panelFrame, 'Running: npm run stale');
+    const overlayTexts = await readAgentOverlayTexts(panelFrame);
+    const siblingOverlay = overlayTexts.find(({ id }) => id === siblingAgentId);
+    expect(siblingOverlay).toBeDefined();
+    expect(siblingOverlay?.text).not.toContain('npm run cleared');
+    expect(siblingOverlay?.text).not.toContain('npm run stale');
+    expect([...(await readAgentOverlayIds(panelFrame)).sort((a, b) => a - b)]).toEqual([
+      siblingAgentId,
+      clearingAgentId,
+    ]);
+  });
+
+  test('B4 heuristic late resume after stale cleanup prevents zombies', async ({ pixelAgents }) => {
+    const { frame, tmpHome, workspaceDir, mockLogFile } = pixelAgents;
+
+    await setSettings(frame, {
+      watchAllSessions: true,
+      hooksEnabled: false,
+      alwaysShowLabels: true,
+      debugView: false,
+    });
+
+    await spawnExternalClaudeScenario({
+      tmpHome,
+      workspaceDir,
+      mockLogFile,
+      sessionId: 'b4-hooks-off-old',
+      scenario: claudeScenario('B4 late resume after stale cleanup hooks off old')
+        .at(5_000)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b4-before', 'Bash', {
+            command: 'npm run before-resume',
+          }),
+        )
+        .at(6_500)
+        .deletePath('{{transcriptPath}}')
+        .holdOpenFor(10_000)
+        .build(),
+    });
+
+    await expectOverlayVisible(frame, 'Running: npm run before-resume');
+    const oldAgentId = await expectSingleAgentOverlay(frame);
+
+    await expectOverlayCount(frame, 0, 45_000);
+
+    await spawnExternalClaudeScenario({
+      tmpHome,
+      workspaceDir,
+      mockLogFile,
+      sessionId: 'b4-hooks-off-resumed',
+      scenario: claudeScenario('B4 late resume after stale cleanup hooks off new')
+        .at(5_000)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b4-late', 'Bash', {
+            command: 'npm run late-resume',
+          }),
+        )
+        .holdOpenFor(12_000)
+        .build(),
+    });
+
+    await expectOverlayVisible(frame, 'Running: npm run late-resume', 12_000);
+    const [newAgentId] = await readAgentOverlayIds(frame);
+    expect(newAgentId).toBeDefined();
+    expect(newAgentId).not.toBe(oldAgentId);
   });
 
   test('B5 three parallel Task subagents in one turn', async ({ pixelAgents }) => {
@@ -293,5 +436,71 @@ test.describe('Hooks OFF / Lifecycle', () => {
     await panelFrame.waitForTimeout(1_000);
     await expectNoOverlay(panelFrame, 'Running: npm run ghost');
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
+  });
+
+  test('B12 close via X prevents old JSONL re-adoption during cooldown', async ({
+    pixelAgents,
+  }) => {
+    const { frame, tmpHome, workspaceDir, mockLogFile } = pixelAgents;
+
+    await setSettings(frame, {
+      watchAllSessions: true,
+      hooksEnabled: false,
+      alwaysShowLabels: true,
+      debugView: false,
+    });
+
+    await spawnExternalClaudeScenario({
+      tmpHome,
+      workspaceDir,
+      mockLogFile,
+      sessionId: 'b12-hooks-off-old',
+      scenario: claudeScenario('B12 dismissal cooldown hooks off old session')
+        .at(5_000)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b12-old-live', 'Bash', {
+            command: 'npm run old-live',
+          }),
+        )
+        .at(12_000)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b12-old-stale', 'Bash', {
+            command: 'npm run old-stale',
+          }),
+        )
+        .holdOpenFor(16_000)
+        .build(),
+    });
+
+    await expectOverlayVisible(frame, 'Running: npm run old-live');
+    const oldAgentId = await expectSingleAgentOverlay(frame);
+    await closeAgentFromOverlay(frame, { agentId: oldAgentId });
+    await expectOverlayCount(frame, 0, 8_000);
+
+    await spawnExternalClaudeScenario({
+      tmpHome,
+      workspaceDir,
+      mockLogFile,
+      sessionId: 'b12-hooks-off-new',
+      scenario: claudeScenario('B12 dismissal cooldown hooks off new session')
+        .at(5_000)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b12-new-live', 'Bash', {
+            command: 'npm run reopened',
+          }),
+        )
+        .holdOpenFor(12_000)
+        .build(),
+    });
+
+    await expectOverlayVisible(frame, 'Running: npm run reopened', 12_000);
+    await expectOverlayCount(frame, 1);
+    const [newAgentId] = await readAgentOverlayIds(frame);
+    expect(newAgentId).toBeDefined();
+    expect(newAgentId).not.toBe(oldAgentId);
+
+    await frame.waitForTimeout(8_000);
+    await expectNoOverlay(frame, 'Running: npm run old-stale', 2_000);
+    await expectOverlayCount(frame, 1);
   });
 });
