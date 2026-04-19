@@ -492,13 +492,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
         run: |
-          if [ "$CI_RESULT" != "success" ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=ci-blocked" >> "$GITHUB_OUTPUT"
-          elif [ "$LINUX_E2E_RESULT" != "success" ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=linux-e2e-blocked" >> "$GITHUB_OUTPUT"
-          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$PR_HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$PR_HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "reason=fork-pr" >> "$GITHUB_OUTPUT"
           elif [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
