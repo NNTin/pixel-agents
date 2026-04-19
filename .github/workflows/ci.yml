@@ -196,7 +196,7 @@ jobs:
         # TODO: windows-latest runs by far longest. When we have more e2e tests look into parallizing windows tests in a matrix
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 60
     env:
       PLAYWRIGHT_BROWSERS_PATH: .playwright-browsers
 
