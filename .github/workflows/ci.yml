@@ -191,11 +191,11 @@ jobs:
           exit "$failed"
 
   linux-e2e:
-    name: Linux E2E (shard ${{ matrix.shard }}/2)
+    name: Linux E2E (shard ${{ matrix.shard }}/4)
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -250,7 +250,8 @@ jobs:
         id: e2e_test
         if: steps.install_playwright_deps.outcome == 'success'
         # TODO: remove attach video on success, kept for now for debugging reasons as we are still stabilizing the E2E tests
-        run: npm run e2e -- --attach-videos-on-success --run-id linux-shard-${{ matrix.shard }} --shard=${{ matrix.shard }}/2 --workers=3
+        # CI Runner is too weak to run multiple workers, using 1 worker, locally more workers can be used
+        run: npm run e2e -- --attach-videos-on-success --run-id linux-shard-${{ matrix.shard }} --shard=${{ matrix.shard }}/4 --workers=1
         continue-on-error: true
 
       - name: Upload E2E Artifacts
