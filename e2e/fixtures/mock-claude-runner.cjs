@@ -112,6 +112,25 @@ function readSettings(homeDir) {
   }
 }
 
+function normalizePathForMatch(value) {
+  return String(value).replace(/\\/g, '/');
+}
+
+function isPixelAgentsHookCommand(homeDir, command) {
+  if (typeof command !== 'string' || command.length === 0) {
+    return false;
+  }
+
+  const normalizedCommand = normalizePathForMatch(command);
+  const currentHookPath = normalizePathForMatch(
+    path.join(homeDir, '.pixel-agents', 'hooks', 'claude-hook.js'),
+  );
+
+  return (
+    normalizedCommand.includes(currentHookPath)
+  );
+}
+
 function resolveTemplateString(template, context) {
   if (typeof template !== 'string') {
     return template;
@@ -211,6 +230,9 @@ async function emitHook(homeDir, context, payload) {
     const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];
     for (const hook of hooks) {
       if (hook?.type !== 'command' || typeof hook.command !== 'string' || hook.command.length === 0) {
+        continue;
+      }
+      if (!isPixelAgentsHookCommand(homeDir, hook.command)) {
         continue;
       }
       await runHookCommand(hook.command, payload, process.env, context.cwd);

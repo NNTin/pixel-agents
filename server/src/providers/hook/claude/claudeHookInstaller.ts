@@ -64,14 +64,9 @@ function writeClaudeSettings(settings: ClaudeSettings): void {
   }
 }
 
-/** Legacy script name (before rename to claude-hook.js). */
-const LEGACY_HOOK_MARKER = 'pixel-agents-hook.js';
-
-/** Check if a hook entry belongs to Pixel Agents (current or legacy script name). */
+/** Check if a hook entry belongs to Pixel Agents. */
 function isOurHookEntry(entry: ClaudeHookEntry): boolean {
-  return entry.hooks.some(
-    (h) => h.command.includes(HOOK_SCRIPT_MARKER) || h.command.includes(LEGACY_HOOK_MARKER),
-  );
+  return entry.hooks.some((h) => h.command.includes(HOOK_SCRIPT_MARKER));
 }
 
 /** Build the shell command that Claude Code will execute for each hook event. */
