@@ -1,22 +1,22 @@
 import path from 'path';
 
-import { expect, test } from '../../fixtures/pixel-agents';
+import { expect, test } from '../../../fixtures/pixel-agents';
 import {
   idlePrompt,
   permissionRequest,
   preToolUseBash,
   sessionEndExit,
   sessionStartStartup,
-} from '../../helpers/hooks';
-import { spawnInternalAgentAndWait } from '../../helpers/internal-agent';
+} from '../../../helpers/hooks';
+import { spawnInternalAgentAndWait } from '../../../helpers/internal-agent';
 import {
   arrangeNextClaudeInvocation,
   claudeScenario,
   spawnExternalClaudeScenario,
   waitForClaudeHookSetup,
-} from '../../helpers/mock-claude';
-import { expectOverlayCount, expectOverlayVisible } from '../../helpers/office';
-import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
+} from '../../../helpers/mock-claude';
+import { expectOverlayCount, expectOverlayVisible } from '../../../helpers/office';
+import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../../helpers/webview';
 
 test.describe('Hooks ON / Basic', () => {
   test('A1 internal basic spawn smoke', async ({ pixelAgents }) => {

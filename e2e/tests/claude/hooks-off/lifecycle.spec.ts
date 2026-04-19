@@ -1,20 +1,20 @@
-import { expect, test } from '../../fixtures/pixel-agents';
+import { expect, test } from '../../../fixtures/pixel-agents';
 import {
   spawnInternalAgentAndWait,
   spawnInternalAgentAndWaitForInvocation,
-} from '../../helpers/internal-agent';
+} from '../../../helpers/internal-agent';
 import {
   INLINE_TEAMMATE_ALIAS,
   INLINE_TEAMMATE_ROLE,
   uniqueTeamName,
   withInlineTeammateSession,
-} from '../../helpers/lifecycle';
+} from '../../../helpers/lifecycle';
 import {
   arrangeNextClaudeInvocation,
   claudeScenario,
   mockClaudeInitRecord,
   spawnExternalClaudeScenario,
-} from '../../helpers/mock-claude';
+} from '../../../helpers/mock-claude';
 import {
   closeAgentFromOverlay,
   expectNoOverlay,
@@ -26,7 +26,7 @@ import {
   expectSingleAgentOverlay,
   readAgentOverlayIds,
   readAgentOverlayTexts,
-} from '../../helpers/office';
+} from '../../../helpers/office';
 import {
   buildAssistantToolUseBatchRecord,
   buildAssistantToolUseRecord,
@@ -36,8 +36,8 @@ import {
   buildTurnDurationRecord,
   buildUserToolResultBatchRecord,
   seedTeamConfig,
-} from '../../helpers/team';
-import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
+} from '../../../helpers/team';
+import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../../helpers/webview';
 
 const PARALLEL_PARENT_TOOL_ID = 'toolu-b5-parent';
 

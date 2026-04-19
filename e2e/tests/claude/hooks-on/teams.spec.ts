@@ -1,6 +1,6 @@
 import type { Frame } from '@playwright/test';
 
-import { test } from '../../fixtures/pixel-agents';
+import { test } from '../../../fixtures/pixel-agents';
 import {
   permissionRequest,
   preToolUseAgent,
@@ -9,21 +9,21 @@ import {
   sessionStartStartup,
   subagentStart,
   waitForHookServer,
-} from '../../helpers/hooks';
-import { spawnInternalAgentAndWait } from '../../helpers/internal-agent';
+} from '../../../helpers/hooks';
+import { spawnInternalAgentAndWait } from '../../../helpers/internal-agent';
 import {
   expectNoOverlayWithTexts,
   expectOverlayCount,
   expectOverlayVisibleWithTexts,
-} from '../../helpers/office';
+} from '../../../helpers/office';
 import {
   appendAssistantToolUse,
   appendTeamMetadata,
   createClaudeTranscript,
   createTeammateTranscript,
   seedTeamConfig,
-} from '../../helpers/team';
-import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
+} from '../../../helpers/team';
+import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../../helpers/webview';
 
 const TEAMMATE_ROLE = 'web-researcher';
 

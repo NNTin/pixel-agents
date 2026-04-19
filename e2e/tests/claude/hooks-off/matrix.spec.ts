@@ -1,19 +1,19 @@
 import type { Frame } from '@playwright/test';
 
-import { expect, test } from '../../fixtures/pixel-agents';
-import { spawnInternalAgentAndWait } from '../../helpers/internal-agent';
+import { expect, test } from '../../../fixtures/pixel-agents';
+import { spawnInternalAgentAndWait } from '../../../helpers/internal-agent';
 import {
   arrangeNextClaudeInvocation,
   type ClaudeMockScenarioBuilder,
   claudeScenario,
   spawnExternalClaudeScenario,
-} from '../../helpers/mock-claude';
+} from '../../../helpers/mock-claude';
 import {
   expectNoOverlayWithTexts,
   expectOverlayCount,
   expectOverlayVisible,
   expectOverlayVisibleWithTexts,
-} from '../../helpers/office';
+} from '../../../helpers/office';
 import {
   buildAssistantToolUseRecord,
   buildAsyncAgentLaunchResultRecord,
@@ -21,8 +21,8 @@ import {
   buildTurnDurationRecord,
   buildUserToolResultRecord,
   seedTeamConfig,
-} from '../../helpers/team';
-import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
+} from '../../../helpers/team';
+import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../../helpers/webview';
 
 const TEAMMATE_ROLE = 'web-researcher';
 const TEAMMATE_ALIAS = 'teammate';

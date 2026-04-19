@@ -1,4 +1,4 @@
-import { expect, test } from '../../fixtures/pixel-agents';
+import { expect, test } from '../../../fixtures/pixel-agents';
 import {
   notificationPermissionPrompt,
   preToolUseAgent,
@@ -12,22 +12,22 @@ import {
   subagentStart,
   taskCompleted,
   teammateIdle,
-} from '../../helpers/hooks';
-import { spawnInternalAgentAndWait } from '../../helpers/internal-agent';
+} from '../../../helpers/hooks';
+import { spawnInternalAgentAndWait } from '../../../helpers/internal-agent';
 import {
   INLINE_TEAMMATE_ALIAS,
   INLINE_TEAMMATE_ROLE,
   uniqueTeamName,
   withInlineTeammateSession,
   withInlineTeammateSessions,
-} from '../../helpers/lifecycle';
+} from '../../../helpers/lifecycle';
 import {
   arrangeNextClaudeInvocation,
   claudeScenario,
   mockClaudeInitRecord,
   spawnExternalClaudeScenario,
   waitForClaudeHookSetup,
-} from '../../helpers/mock-claude';
+} from '../../../helpers/mock-claude';
 import {
   closeAgentFromOverlay,
   expectNoOverlay,
@@ -38,7 +38,7 @@ import {
   expectOverlayVisibleWithTexts,
   expectSingleAgentOverlay,
   readAgentOverlayIds,
-} from '../../helpers/office';
+} from '../../../helpers/office';
 import {
   buildAssistantToolUseBatchRecord,
   buildAssistantToolUseRecord,
@@ -48,8 +48,8 @@ import {
   buildUserToolResultBatchRecord,
   buildUserToolResultRecord,
   seedTeamConfig,
-} from '../../helpers/team';
-import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../helpers/webview';
+} from '../../../helpers/team';
+import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../../helpers/webview';
 
 const PARALLEL_PARENT_TOOL_ID = 'toolu-b5-parent';
 const SECOND_TEAMMATE_ALIAS = 'reviewer';
