@@ -18,6 +18,10 @@ export function getOverlayByTexts(frame: Frame, texts: string[]): Locator {
   );
 }
 
+export function getOverlayByAgentId(frame: Frame, agentId: number): Locator {
+  return frame.locator(`[data-testid="agent-overlay"][data-agent-id="${agentId}"]`);
+}
+
 export async function expectOverlayCount(
   frame: Frame,
   count: number,
@@ -42,6 +46,17 @@ export async function expectOverlayVisibleWithTexts(
   await expect(getOverlayByTexts(frame, texts).first()).toBeVisible({ timeout });
 }
 
+export async function expectOverlayVisibleForAgent(
+  frame: Frame,
+  agentId: number,
+  text: string,
+  timeout = OVERLAY_TIMEOUT_MS,
+): Promise<void> {
+  await expect(getOverlayByAgentId(frame, agentId).filter({ hasText: text })).toBeVisible({
+    timeout,
+  });
+}
+
 export async function expectNoOverlay(frame: Frame, text: string, timeout = 1_000): Promise<void> {
   await expect(getOverlayByText(frame, text)).toHaveCount(0, { timeout });
 }
@@ -63,6 +78,26 @@ export async function readAgentOverlayIds(frame: Frame): Promise<number[]> {
     const id = Number(value);
     return Number.isFinite(id) ? [id] : [];
   });
+}
+
+export async function readAgentOverlayTexts(
+  frame: Frame,
+): Promise<Array<{ id: number; text: string }>> {
+  return getAgentOverlays(frame).evaluateAll((elements) =>
+    elements.flatMap((element) => {
+      const rawId = element.getAttribute('data-agent-id');
+      const id = Number(rawId);
+      if (!Number.isFinite(id)) {
+        return [];
+      }
+      return [
+        {
+          id,
+          text: element.textContent ?? '',
+        },
+      ];
+    }),
+  );
 }
 
 export async function expectSingleAgentOverlay(frame: Frame): Promise<number> {

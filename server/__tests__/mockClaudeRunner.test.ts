@@ -196,4 +196,34 @@ describe('mock-claude-runner hook execution', () => {
       agentType: 'web-researcher',
     });
   });
+
+  it('writes timed JSON files with template paths', async () => {
+    const configPath = path.join(tmpHome, '.claude', 'teams', 'research', 'config.json');
+
+    writeScenarioQueue(tmpHome, [
+      {
+        schemaVersion: 1,
+        autoInit: false,
+        holdOpenMs: 0,
+        sessions: [],
+        actions: [
+          {
+            kind: 'writeJson',
+            atMs: 0,
+            filePath: configPath,
+            value: {
+              members: [{ name: 'lead' }],
+            },
+          },
+        ],
+      },
+    ]);
+
+    const { code, stderr } = await runMockClaude('lead-session');
+
+    expect(code, stderr).toBe(0);
+    expect(JSON.parse(fs.readFileSync(configPath, 'utf8'))).toEqual({
+      members: [{ name: 'lead' }],
+    });
+  });
 });

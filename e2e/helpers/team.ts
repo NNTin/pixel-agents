@@ -53,17 +53,25 @@ export function buildAssistantToolUseRecord(
   toolName: string,
   input: Record<string, unknown> = {},
 ): Record<string, unknown> {
+  return buildAssistantToolUseBatchRecord([{ toolId, toolName, input }]);
+}
+
+export function buildAssistantToolUseBatchRecord(
+  tools: Array<{
+    toolId: string;
+    toolName: string;
+    input?: Record<string, unknown>;
+  }>,
+): Record<string, unknown> {
   return {
     type: 'assistant',
     message: {
-      content: [
-        {
-          type: 'tool_use',
-          id: toolId,
-          name: toolName,
-          input,
-        },
-      ],
+      content: tools.map(({ toolId, toolName, input }) => ({
+        type: 'tool_use',
+        id: toolId,
+        name: toolName,
+        input: input ?? {},
+      })),
     },
   };
 }
@@ -81,16 +89,23 @@ export function buildUserToolResultRecord(
   toolUseId: string,
   content: unknown = 'ok',
 ): Record<string, unknown> {
+  return buildUserToolResultBatchRecord([{ toolUseId, content }]);
+}
+
+export function buildUserToolResultBatchRecord(
+  results: Array<{
+    toolUseId: string;
+    content?: unknown;
+  }>,
+): Record<string, unknown> {
   return {
     type: 'user',
     message: {
-      content: [
-        {
-          type: 'tool_result',
-          tool_use_id: toolUseId,
-          content,
-        },
-      ],
+      content: results.map(({ toolUseId, content }) => ({
+        type: 'tool_result',
+        tool_use_id: toolUseId,
+        content: content ?? 'ok',
+      })),
     },
   };
 }
@@ -119,21 +134,79 @@ export function buildTurnDurationRecord(): Record<string, unknown> {
   };
 }
 
+export function buildClearCommandRecord(): Record<string, unknown> {
+  return {
+    type: 'user',
+    content: '/clear</command-name>',
+  };
+}
+
+function buildProgressMessageRecord(
+  messageType: 'assistant' | 'user',
+  content: Array<Record<string, unknown>>,
+): Record<string, unknown> {
+  return {
+    type: 'progress',
+    data: {
+      type: 'agent_progress',
+      message: {
+        type: messageType,
+        message: {
+          content,
+        },
+      },
+    },
+  };
+}
+
+export function buildSubagentProgressToolUseRecord(
+  parentToolUseId: string,
+  toolUseId: string,
+  toolName: string,
+  input: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    parentToolUseID: parentToolUseId,
+    ...buildProgressMessageRecord('assistant', [
+      {
+        type: 'tool_use',
+        id: toolUseId,
+        name: toolName,
+        input,
+      },
+    ]),
+  };
+}
+
+export function buildSubagentProgressToolResultRecord(
+  parentToolUseId: string,
+  toolUseId: string,
+  content: unknown = 'ok',
+): Record<string, unknown> {
+  return {
+    parentToolUseID: parentToolUseId,
+    ...buildProgressMessageRecord('user', [
+      {
+        type: 'tool_result',
+        tool_use_id: toolUseId,
+        content,
+      },
+    ]),
+  };
+}
+
+export function buildTeamConfig(members: string[]): { members: Array<{ name: string }> } {
+  return {
+    members: members.map((name) => ({ name })),
+  };
+}
+
 export function seedTeamConfig(tmpHome: string, teamName: string, members: string[]): string {
   const teamDir = path.join(tmpHome, '.claude', 'teams', teamName);
   fs.mkdirSync(teamDir, { recursive: true });
 
   const configPath = path.join(teamDir, 'config.json');
-  fs.writeFileSync(
-    configPath,
-    JSON.stringify(
-      {
-        members: members.map((name) => ({ name })),
-      },
-      null,
-      2,
-    ),
-  );
+  fs.writeFileSync(configPath, JSON.stringify(buildTeamConfig(members), null, 2));
 
   return configPath;
 }

@@ -1,24 +1,18 @@
 import { expect, test } from '../../fixtures/pixel-agents';
 import {
-  preToolUseBash,
-  sessionEndClear,
-  sessionEndResume,
-  sessionStartClear,
-  sessionStartResume,
-  sessionStartStartup,
-} from '../../helpers/hooks';
-import {
   INLINE_TEAMMATE_ALIAS,
   INLINE_TEAMMATE_ROLE,
   uniqueTeamName,
   withInlineTeammateSession,
 } from '../../helpers/lifecycle';
-import { spawnInternalAgentAndWait } from '../../helpers/internal-agent';
+import {
+  spawnInternalAgentAndWait,
+  spawnInternalAgentAndWaitForInvocation,
+} from '../../helpers/internal-agent';
 import {
   arrangeNextClaudeInvocation,
   claudeScenario,
   mockClaudeInitRecord,
-  waitForClaudeHookSetup,
 } from '../../helpers/mock-claude';
 import {
   expectNoOverlay,
@@ -32,6 +26,7 @@ import {
 import {
   buildAssistantToolUseRecord,
   buildAssistantToolUseBatchRecord,
+  buildClearCommandRecord,
   buildTeamConfig,
   buildTeamMetadataRecord,
   buildTurnDurationRecord,
@@ -42,117 +37,96 @@ import { getPixelAgentsFrame, openPixelAgentsPanel, setSettings } from '../../he
 
 const PARALLEL_PARENT_TOOL_ID = 'toolu-b5-parent';
 
-test.describe('Hooks ON / Lifecycle', () => {
+test.describe('Hooks OFF / Lifecycle', () => {
   test('B1 internal clear reassignment', async ({ pixelAgents }) => {
     const { frame, window, tmpHome, mockLogFile } = pixelAgents;
 
     await setSettings(frame, {
       watchAllSessions: false,
-      hooksEnabled: true,
+      hooksEnabled: false,
       alwaysShowLabels: true,
       debugView: false,
     });
 
-    await waitForClaudeHookSetup(tmpHome);
     await arrangeNextClaudeInvocation(
       tmpHome,
-      claudeScenario('B1 internal clear reassignment')
+      claudeScenario('B1 internal clear reassignment hooks off')
         .defineSession('replacement', '{{sessionId}}-clear')
         .at(3_500)
-        .emitHook(sessionEndClear('{{sessionId}}') as Record<string, unknown>)
-        .at(3_600)
         .appendJsonl(mockClaudeInitRecord('mock-claude-clear-ready'), {
           session: 'replacement',
         })
-        .at(3_800)
-        .emitHook(
-          sessionStartClear(
-            '{{sessions.replacement.sessionId}}',
-            '{{cwd}}',
-            '{{sessions.replacement.transcriptPath}}',
-          ) as Record<string, unknown>,
+        .at(3_550)
+        .appendJsonl(buildClearCommandRecord(), {
+          session: 'replacement',
+        })
+        .at(4_500)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b1-fresh', 'Bash', {
+            command: 'npm test',
+          }),
+          { session: 'replacement' },
         )
-        .at(4_200)
-        .emitHook(
-          preToolUseBash('{{sessions.replacement.sessionId}}', 'npm test') as Record<
-            string,
-            unknown
-          >,
+        .at(5_100)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b1-stale', 'Bash', {
+            command: 'npm run stale',
+          }),
         )
-        .at(4_800)
-        .emitHook(preToolUseBash('{{sessionId}}', 'npm run stale') as Record<string, unknown>)
-        .holdOpenFor(7_000)
+        .holdOpenFor(8_000)
         .build(),
     );
+
     await spawnInternalAgentAndWait(frame, tmpHome, mockLogFile);
     await openPixelAgentsPanel(window);
     const panelFrame = await getPixelAgentsFrame(window);
     const originalAgentId = await expectSingleAgentOverlay(panelFrame);
 
-    await expectOverlayVisible(panelFrame, 'Running: npm test');
+    await expectOverlayVisible(panelFrame, 'Running: npm test', 12_000);
     await expectOverlayCount(panelFrame, 1);
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
 
-    await panelFrame.waitForTimeout(500);
+    await panelFrame.waitForTimeout(1_000);
     await expectNoOverlay(panelFrame, 'Running: npm run stale');
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
   });
 
   test('B3 internal resume reassignment within grace', async ({ pixelAgents }) => {
-    const { frame, window, tmpHome, mockLogFile } = pixelAgents;
+    const { frame, window, tmpHome, workspaceDir, mockLogFile } = pixelAgents;
 
     await setSettings(frame, {
       watchAllSessions: false,
-      hooksEnabled: true,
+      hooksEnabled: false,
       alwaysShowLabels: true,
       debugView: false,
     });
 
-    await waitForClaudeHookSetup(tmpHome);
     await arrangeNextClaudeInvocation(
       tmpHome,
-      claudeScenario('B3 internal resume reassignment')
+      claudeScenario('B3 internal resume reassignment hooks off')
+        .withoutAutoInit()
         .defineSession('replacement', '{{sessionId}}-resume')
-        .at(3_500)
-        .emitHook(sessionEndResume('{{sessionId}}') as Record<string, unknown>)
-        .at(3_600)
+        .at(11_000)
         .appendJsonl(mockClaudeInitRecord('mock-claude-resume-ready'), {
           session: 'replacement',
         })
-        .at(3_800)
-        .emitHook(
-          sessionStartResume(
-            '{{sessions.replacement.sessionId}}',
-            '{{cwd}}',
-            '{{sessions.replacement.transcriptPath}}',
-          ) as Record<string, unknown>,
+        .at(11_500)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b3-fresh', 'Bash', {
+            command: 'npm test',
+          }),
+          { session: 'replacement' },
         )
-        .at(4_200)
-        .emitHook(
-          preToolUseBash('{{sessions.replacement.sessionId}}', 'npm test') as Record<
-            string,
-            unknown
-          >,
-        )
-        .at(4_800)
-        .emitHook(preToolUseBash('{{sessionId}}', 'npm run stale') as Record<string, unknown>)
-        .holdOpenFor(9_000)
+        .holdOpenFor(16_000)
         .build(),
     );
-    await spawnInternalAgentAndWait(frame, tmpHome, mockLogFile);
+
+    await spawnInternalAgentAndWaitForInvocation(frame, tmpHome, workspaceDir, mockLogFile);
     await openPixelAgentsPanel(window);
     const panelFrame = await getPixelAgentsFrame(window);
     const originalAgentId = await expectSingleAgentOverlay(panelFrame);
 
-    await expectOverlayVisible(panelFrame, 'Running: npm test');
-    await expectOverlayCount(panelFrame, 1);
-    expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
-
-    await panelFrame.waitForTimeout(500);
-    await expectNoOverlay(panelFrame, 'Running: npm run stale');
-
-    await panelFrame.waitForTimeout(2_500);
-    await expectOverlayVisible(panelFrame, 'Running: npm test');
+    await expectOverlayVisible(panelFrame, 'Running: npm test', 16_000);
     await expectOverlayCount(panelFrame, 1);
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
   });
@@ -162,22 +136,14 @@ test.describe('Hooks ON / Lifecycle', () => {
 
     await setSettings(frame, {
       watchAllSessions: false,
-      hooksEnabled: true,
+      hooksEnabled: false,
       alwaysShowLabels: true,
       debugView: false,
     });
 
-    await waitForClaudeHookSetup(tmpHome);
     await arrangeNextClaudeInvocation(
       tmpHome,
-      claudeScenario('B5 three parallel Task subagents in one turn hooks on')
-        .at(300)
-        .emitHook(
-          sessionStartStartup('{{sessionId}}', '{{cwd}}', '{{transcriptPath}}') as Record<
-            string,
-            unknown
-          >,
-        )
+      claudeScenario('B5 three parallel Task subagents in one turn hooks off')
         .at(2_500)
         .appendJsonl(
           buildAssistantToolUseBatchRecord([
@@ -228,27 +194,19 @@ test.describe('Hooks ON / Lifecycle', () => {
 
   test('B6 inline teammate removed from config', async ({ pixelAgents }) => {
     const { frame, window, tmpHome, mockLogFile } = pixelAgents;
-    const teamName = uniqueTeamName('b6-inline-hooks-on');
+    const teamName = uniqueTeamName('b6-inline-hooks-off');
     const configPath = seedTeamConfig(tmpHome, teamName, ['lead', INLINE_TEAMMATE_ROLE]);
 
     await setSettings(frame, {
       watchAllSessions: false,
-      hooksEnabled: true,
+      hooksEnabled: false,
       alwaysShowLabels: true,
       debugView: false,
     });
 
-    await waitForClaudeHookSetup(tmpHome);
     await arrangeNextClaudeInvocation(
       tmpHome,
-      withInlineTeammateSession(claudeScenario('B6 inline teammate removed from config hooks on'))
-        .at(300)
-        .emitHook(
-          sessionStartStartup('{{sessionId}}', '{{cwd}}', '{{transcriptPath}}') as Record<
-            string,
-            unknown
-          >,
-        )
+      withInlineTeammateSession(claudeScenario('B6 inline teammate removed from config hooks off'))
         .at(500)
         .appendJsonl(buildTeamMetadataRecord(teamName))
         .at(1_500)
@@ -289,39 +247,36 @@ test.describe('Hooks ON / Lifecycle', () => {
 
     await setSettings(frame, {
       watchAllSessions: false,
-      hooksEnabled: true,
+      hooksEnabled: false,
       alwaysShowLabels: true,
       debugView: false,
     });
 
-    await waitForClaudeHookSetup(tmpHome);
     await arrangeNextClaudeInvocation(
       tmpHome,
-      claudeScenario('B11 rapid clear then new tool in under 500 ms hooks on')
+      claudeScenario('B11 rapid clear then new tool in under 500 ms hooks off')
         .defineSession('replacement', '{{sessionId}}-clear-fast')
-        .at(3_500)
-        .emitHook(sessionEndClear('{{sessionId}}') as Record<string, unknown>)
-        .at(3_600)
+        .at(3_000)
         .appendJsonl(mockClaudeInitRecord('mock-claude-clear-fast-ready'), {
           session: 'replacement',
         })
-        .at(3_650)
-        .emitHook(
-          sessionStartClear(
-            '{{sessions.replacement.sessionId}}',
-            '{{cwd}}',
-            '{{sessions.replacement.transcriptPath}}',
-          ) as Record<string, unknown>,
+        .at(3_050)
+        .appendJsonl(buildClearCommandRecord(), {
+          session: 'replacement',
+        })
+        .at(3_200)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b11-fresh', 'Bash', {
+            command: 'npm run fresh',
+          }),
+          { session: 'replacement' },
         )
-        .at(3_775)
-        .emitHook(
-          preToolUseBash('{{sessions.replacement.sessionId}}', 'npm run fresh') as Record<
-            string,
-            unknown
-          >,
+        .at(3_350)
+        .appendJsonl(
+          buildAssistantToolUseRecord('toolu-b11-ghost', 'Bash', {
+            command: 'npm run ghost',
+          }),
         )
-        .at(3_925)
-        .emitHook(preToolUseBash('{{sessionId}}', 'npm run ghost') as Record<string, unknown>)
         .holdOpenFor(7_000)
         .build(),
     );
@@ -331,11 +286,11 @@ test.describe('Hooks ON / Lifecycle', () => {
     const panelFrame = await getPixelAgentsFrame(window);
     const originalAgentId = await expectSingleAgentOverlay(panelFrame);
 
-    await expectOverlayVisible(panelFrame, 'Running: npm run fresh');
+    await expectOverlayVisible(panelFrame, 'Running: npm run fresh', 12_000);
     await expectOverlayCount(panelFrame, 1);
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
 
-    await panelFrame.waitForTimeout(750);
+    await panelFrame.waitForTimeout(1_000);
     await expectNoOverlay(panelFrame, 'Running: npm run ghost');
     expect(await readAgentOverlayIds(panelFrame)).toEqual([originalAgentId]);
   });

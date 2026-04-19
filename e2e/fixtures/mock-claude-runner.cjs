@@ -339,6 +339,17 @@ async function playScenario(homeDir, scenario, context) {
       continue;
     }
 
+    if (action.kind === 'writeJson') {
+      const filePath = resolveTemplateString(action.filePath, context);
+      const value = resolveValue(action.value, context);
+      writeJsonFile(filePath, value);
+      logAction(
+        homeDir,
+        `writeJson ${path.basename(filePath)} ${JSON.stringify({ filePath, value })}`,
+      );
+      continue;
+    }
+
     if (action.kind === 'exit') {
       logAction(homeDir, `exit code=${action.code || 0}`);
       process.exit(typeof action.code === 'number' ? action.code : 0);

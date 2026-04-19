@@ -3,6 +3,7 @@ import type { Frame } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
+import { getClaudeProjectDir } from './team';
 import { clickAddAgent } from './webview';
 
 const INTERNAL_AGENT_TIMEOUT_MS = 20_000;
@@ -88,6 +89,37 @@ export async function spawnInternalAgentAndWait(
     sessionId,
     projectDir: path.dirname(jsonlFile),
     jsonlFile,
+    invocationLog,
+  };
+}
+
+export async function spawnInternalAgentAndWaitForInvocation(
+  frame: Frame,
+  tmpHome: string,
+  workspaceDir: string,
+  mockLogFile: string,
+): Promise<InternalAgentSpawn> {
+  await clickAddAgent(frame);
+
+  await expect
+    .poll(() => extractLatestSessionId(readInvocationLog(mockLogFile)) ?? '', {
+      message: `Expected mock invocation log at ${mockLogFile} to contain a session id`,
+      timeout: INTERNAL_AGENT_TIMEOUT_MS,
+      intervals: [250, 500, 1000],
+    })
+    .not.toBe('');
+
+  const invocationLog = readInvocationLog(mockLogFile);
+  const sessionId = extractLatestSessionId(invocationLog);
+  if (!sessionId) {
+    throw new Error(`No session id found in mock invocation log at ${mockLogFile}`);
+  }
+
+  const projectDir = getClaudeProjectDir(tmpHome, workspaceDir);
+  return {
+    sessionId,
+    projectDir,
+    jsonlFile: path.join(projectDir, `${sessionId}.jsonl`),
     invocationLog,
   };
 }

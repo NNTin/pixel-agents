@@ -31,6 +31,13 @@ export interface ClaudeMockEmitHookAction {
   payload: Record<string, unknown>;
 }
 
+export interface ClaudeMockWriteJsonAction {
+  kind: 'writeJson';
+  atMs: number;
+  filePath: string;
+  value: Record<string, unknown>;
+}
+
 export interface ClaudeMockExitAction {
   kind: 'exit';
   atMs: number;
@@ -40,6 +47,7 @@ export interface ClaudeMockExitAction {
 export type ClaudeMockAction =
   | ClaudeMockAppendJsonlAction
   | ClaudeMockEmitHookAction
+  | ClaudeMockWriteJsonAction
   | ClaudeMockExitAction;
 
 export interface ClaudeMockScenario {
@@ -75,6 +83,16 @@ class TimedScenarioStepBuilder {
       kind: 'emitHook',
       atMs: this.atMs,
       payload,
+    });
+    return this.scenario;
+  }
+
+  writeJson(filePath: string, value: Record<string, unknown>): ClaudeMockScenarioBuilder {
+    this.scenario.pushAction({
+      kind: 'writeJson',
+      atMs: this.atMs,
+      filePath,
+      value,
     });
     return this.scenario;
   }
