@@ -248,8 +248,33 @@ jobs:
       - name: E2E Tests
         id: e2e_test
         if: steps.install_playwright_deps.outcome == 'success'
-        # TODO: remove attach video on success, for debugging purpose only
-        run: npm run e2e -- --attach-videos-on-success
+        # TODO: remove attach video on success, kept for now for debugging reasons as we are still stabilizing the E2E tests
+        shell: bash
+        env:
+          MATRIX_OS: ${{ matrix.os }}
+        run: |
+          if [ "$MATRIX_OS" = "ubuntu-latest" ]; then
+            echo "[e2e] Running Linux shards in parallel (2 shards x 2 workers)"
+
+            pids=()
+
+            npm run e2e -- --attach-videos-on-success --run-id linux-shard-1 --shard=1/2 --workers=2 &
+            pids+=("$!")
+
+            npm run e2e -- --attach-videos-on-success --run-id linux-shard-2 --shard=2/2 --workers=2 &
+            pids+=("$!")
+
+            failed=0
+            for pid in "${pids[@]}"; do
+              if ! wait "$pid"; then
+                failed=1
+              fi
+            done
+
+            exit "$failed"
+          fi
+
+          npm run e2e -- --attach-videos-on-success --run-id "$MATRIX_OS" --workers=4
         continue-on-error: true
 
       - name: Upload E2E Artifacts

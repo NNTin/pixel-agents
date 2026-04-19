@@ -1,15 +1,17 @@
-import { _electron as electron } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
+import { _electron as electron } from '@playwright/test';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+
+import { namespaceE2EPath } from '../run-config';
 
 const REPO_ROOT = path.join(__dirname, '../..');
 const VSCODE_PATH_FILE = path.join(REPO_ROOT, '.vscode-test/vscode-executable.txt');
 const MOCK_CLAUDE_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude');
 const MOCK_CLAUDE_CMD_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude.cmd');
 const MOCK_CLAUDE_RUNNER_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude-runner.cjs');
-const ARTIFACTS_DIR = path.join(REPO_ROOT, 'test-results/e2e');
+const ARTIFACTS_DIR = namespaceE2EPath(path.join(REPO_ROOT, 'test-results/e2e'));
 const IS_WINDOWS = process.platform === 'win32';
 const PATH_SEP = IS_WINDOWS ? ';' : ':';
 
