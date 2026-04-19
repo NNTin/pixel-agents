@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { type ChildProcess, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,6 +13,9 @@ export interface ClaudeMockSessionDefinition {
   alias: string;
   sessionIdTemplate: string;
   cwdTemplate?: string;
+  transcriptPathTemplate?: string;
+  sidecarPathTemplate?: string;
+  sidecarJson?: Record<string, unknown>;
 }
 
 export interface ClaudeMockAppendJsonlAction {
@@ -97,12 +100,20 @@ export class ClaudeMockScenarioBuilder {
   defineSession(
     alias: string,
     sessionIdTemplate: string,
-    options?: { cwdTemplate?: string },
+    options?: {
+      cwdTemplate?: string;
+      transcriptPathTemplate?: string;
+      sidecarPathTemplate?: string;
+      sidecarJson?: Record<string, unknown>;
+    },
   ): ClaudeMockScenarioBuilder {
     this.sessions.push({
       alias,
       sessionIdTemplate,
       cwdTemplate: options?.cwdTemplate,
+      transcriptPathTemplate: options?.transcriptPathTemplate,
+      sidecarPathTemplate: options?.sidecarPathTemplate,
+      sidecarJson: options?.sidecarJson,
     });
     return this;
   }

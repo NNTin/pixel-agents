@@ -140,4 +140,60 @@ describe('mock-claude-runner hook execution', () => {
       notification_type: 'idle_prompt',
     });
   });
+
+  it('writes configured sidecar metadata next to custom transcript paths', async () => {
+    writeScenarioQueue(tmpHome, [
+      {
+        schemaVersion: 1,
+        autoInit: false,
+        holdOpenMs: 0,
+        sessions: [
+          {
+            alias: 'teammate',
+            sessionIdTemplate: 'agent-web-researcher',
+            transcriptPathTemplate:
+              '{{projectDir}}/{{sessionId}}/subagents/agent-web-researcher.jsonl',
+            sidecarPathTemplate:
+              '{{projectDir}}/{{sessionId}}/subagents/agent-web-researcher.meta.json',
+            sidecarJson: {
+              agentType: 'web-researcher',
+            },
+          },
+        ],
+        actions: [
+          {
+            kind: 'appendJsonl',
+            atMs: 0,
+            session: 'teammate',
+            record: {
+              type: 'system',
+              teamName: 'research',
+              agentName: 'web-researcher',
+            },
+          },
+        ],
+      },
+    ]);
+
+    const { code, stderr } = await runMockClaude('lead-session');
+
+    expect(code, stderr).toBe(0);
+
+    const transcriptPath = path.join(
+      tmpHome,
+      '.claude',
+      'projects',
+      workspaceDir.replace(/[^a-zA-Z0-9-]/g, '-'),
+      'lead-session',
+      'subagents',
+      'agent-web-researcher.jsonl',
+    );
+    const sidecarPath = transcriptPath.replace(/\.jsonl$/, '.meta.json');
+
+    expect(fs.existsSync(transcriptPath)).toBe(true);
+    expect(fs.existsSync(sidecarPath)).toBe(true);
+    expect(JSON.parse(fs.readFileSync(sidecarPath, 'utf8'))).toEqual({
+      agentType: 'web-researcher',
+    });
+  });
 });

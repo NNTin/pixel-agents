@@ -30,7 +30,10 @@ export function appendJsonlRecord(jsonlPath: string, record: Record<string, unkn
   fs.appendFileSync(jsonlPath, `${JSON.stringify(record)}\n`);
 }
 
-export function appendTeamMetadata(jsonlPath: string, teamName: string, agentName?: string): void {
+export function buildTeamMetadataRecord(
+  teamName: string,
+  agentName?: string,
+): Record<string, unknown> {
   const record: Record<string, unknown> = {
     type: 'system',
     teamName,
@@ -38,16 +41,19 @@ export function appendTeamMetadata(jsonlPath: string, teamName: string, agentNam
   if (agentName) {
     record['agentName'] = agentName;
   }
-  appendJsonlRecord(jsonlPath, record);
+  return record;
 }
 
-export function appendAssistantToolUse(
-  jsonlPath: string,
+export function appendTeamMetadata(jsonlPath: string, teamName: string, agentName?: string): void {
+  appendJsonlRecord(jsonlPath, buildTeamMetadataRecord(teamName, agentName));
+}
+
+export function buildAssistantToolUseRecord(
   toolId: string,
   toolName: string,
   input: Record<string, unknown> = {},
-): void {
-  appendJsonlRecord(jsonlPath, {
+): Record<string, unknown> {
+  return {
     type: 'assistant',
     message: {
       content: [
@@ -59,7 +65,58 @@ export function appendAssistantToolUse(
         },
       ],
     },
-  });
+  };
+}
+
+export function appendAssistantToolUse(
+  jsonlPath: string,
+  toolId: string,
+  toolName: string,
+  input: Record<string, unknown> = {},
+): void {
+  appendJsonlRecord(jsonlPath, buildAssistantToolUseRecord(toolId, toolName, input));
+}
+
+export function buildUserToolResultRecord(
+  toolUseId: string,
+  content: unknown = 'ok',
+): Record<string, unknown> {
+  return {
+    type: 'user',
+    message: {
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: toolUseId,
+          content,
+        },
+      ],
+    },
+  };
+}
+
+export function buildAsyncAgentLaunchResultRecord(toolUseId: string): Record<string, unknown> {
+  return buildUserToolResultRecord(toolUseId, [
+    {
+      type: 'text',
+      text: 'Async agent launched successfully.',
+    },
+  ]);
+}
+
+export function buildBackgroundAgentDoneRecord(toolUseId: string): Record<string, unknown> {
+  return {
+    type: 'queue-operation',
+    operation: 'enqueue',
+    content: `<tool-use-id>${toolUseId}</tool-use-id>`,
+  };
+}
+
+export function buildTurnDurationRecord(): Record<string, unknown> {
+  return {
+    type: 'system',
+    subtype: 'turn_duration',
+  };
 }
 
 export function seedTeamConfig(tmpHome: string, teamName: string, members: string[]): string {

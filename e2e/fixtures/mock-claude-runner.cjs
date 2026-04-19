@@ -91,6 +91,17 @@ function ensureSessionContext(homeDir, sessionId, cwd) {
   };
 }
 
+function ensureSessionContextWithTranscript(homeDir, sessionId, cwd, transcriptPath) {
+  const context = ensureSessionContext(homeDir, sessionId, cwd);
+  if (!transcriptPath) {
+    return context;
+  }
+  return {
+    ...context,
+    transcriptPath,
+  };
+}
+
 function ensureTranscriptExists(transcriptPath) {
   fs.mkdirSync(path.dirname(transcriptPath), { recursive: true });
   if (!fs.existsSync(transcriptPath)) {
@@ -101,6 +112,11 @@ function ensureTranscriptExists(transcriptPath) {
 function appendJsonl(transcriptPath, record) {
   ensureTranscriptExists(transcriptPath);
   fs.appendFileSync(transcriptPath, `${JSON.stringify(record)}\n`);
+}
+
+function writeJsonFile(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function readSettings(homeDir) {
@@ -170,7 +186,7 @@ function resolveValue(value, context) {
 }
 
 function buildContext(homeDir, scenario, sessionId, cwd) {
-  const self = ensureSessionContext(homeDir, sessionId, cwd);
+  const self = ensureSessionContextWithTranscript(homeDir, sessionId, cwd);
   const context = {
     sessionId: self.sessionId,
     cwd: self.cwd,
@@ -192,11 +208,39 @@ function buildContext(homeDir, scenario, sessionId, cwd) {
       sessionDefinition.cwdTemplate || '{{cwd}}',
       context,
     );
-    context.sessions[sessionDefinition.alias] = ensureSessionContext(
+    const resolvedTranscriptPath = sessionDefinition.transcriptPathTemplate
+      ? resolveTemplateString(sessionDefinition.transcriptPathTemplate, context)
+      : undefined;
+    const sessionContext = ensureSessionContextWithTranscript(
       homeDir,
       resolvedSessionId,
       resolvedCwd,
+      resolvedTranscriptPath,
     );
+    const resolvedSidecarPath = sessionDefinition.sidecarPathTemplate
+      ? resolveTemplateString(sessionDefinition.sidecarPathTemplate, {
+          ...context,
+          sessions: {
+            ...context.sessions,
+            [sessionDefinition.alias]: sessionContext,
+          },
+        })
+      : undefined;
+    const resolvedSidecarJson = sessionDefinition.sidecarJson
+      ? resolveValue(sessionDefinition.sidecarJson, {
+          ...context,
+          sessions: {
+            ...context.sessions,
+            [sessionDefinition.alias]: sessionContext,
+          },
+        })
+      : undefined;
+
+    context.sessions[sessionDefinition.alias] = {
+      ...sessionContext,
+      sidecarPath: resolvedSidecarPath,
+      sidecarJson: resolvedSidecarJson,
+    };
   }
 
   return context;
@@ -241,6 +285,17 @@ async function emitHook(homeDir, context, payload) {
 }
 
 async function playScenario(homeDir, scenario, context) {
+  for (const [alias, session] of Object.entries(context.sessions)) {
+    if (!session.sidecarPath || session.sidecarJson === undefined) {
+      continue;
+    }
+    writeJsonFile(session.sidecarPath, session.sidecarJson);
+    logAction(
+      homeDir,
+      `writeJson ${alias} ${path.basename(session.sidecarPath)} ${JSON.stringify(session.sidecarJson)}`,
+    );
+  }
+
   if (scenario.autoInit !== false) {
     appendJsonl(context.transcriptPath, {
       type: 'system',
