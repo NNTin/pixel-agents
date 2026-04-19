@@ -5,6 +5,7 @@
  * ServerMessage: extension/server -> webview
  * ClientMessage: webview -> extension/server
  */
+import type { OfficeLayout } from './schemas.js';
 
 // ── Server -> Webview ────────────────────────────────────────
 
@@ -18,7 +19,17 @@ export type ServerMessage =
       subagentToolNames: string[];
     }
   // Agent lifecycle
-  | { type: 'agentCreated'; id: number; folderName?: string; isExternal?: boolean }
+  | {
+      type: 'agentCreated';
+      id: number;
+      folderName?: string;
+      isExternal?: boolean;
+      isTeammate?: boolean;
+      teammateName?: string;
+      parentAgentId?: number;
+      teamName?: string;
+      hooksOnly?: boolean;
+    }
   | { type: 'agentClosed'; id: number }
   | { type: 'agentSelected'; id: number }
   | {
@@ -72,7 +83,7 @@ export type ServerMessage =
   | { type: 'agentTokenUsage'; id: number; inputTokens: number; outputTokens: number }
 
   // Layout
-  | { type: 'layoutLoaded'; layout: Record<string, unknown> | null; wasReset?: boolean }
+  | { type: 'layoutLoaded'; layout: OfficeLayout | null; wasReset?: boolean }
 
   // Assets
   | {
@@ -123,7 +134,7 @@ export type ClientMessage =
       type: 'saveAgentSeats';
       seats: Record<number, { palette: number; hueShift: number; seatId: string | null }>;
     }
-  | { type: 'saveLayout'; layout: Record<string, unknown> }
+  | { type: 'saveLayout'; layout: OfficeLayout }
 
   // Settings
   | { type: 'setSoundEnabled'; enabled: boolean }

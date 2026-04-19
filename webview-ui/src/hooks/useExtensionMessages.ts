@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import type { ServerMessage } from '../../../core/src/messages.js';
 import { playDoneSound, playPermissionSound, setSoundEnabled } from '../notificationSound.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import { setFloorSprites } from '../office/floorTiles.js';
@@ -121,8 +122,7 @@ export function useExtensionMessages(
       folderName?: string;
     }> = [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = (msg: any) => {
+    const handler = (msg: ServerMessage) => {
       const os = getOfficeState();
 
       if (msg.type === 'providerCapabilities') {

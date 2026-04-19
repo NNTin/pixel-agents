@@ -84,7 +84,7 @@ export function useEditorActions(
   const saveLayout = useCallback((layout: OfficeLayout) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      transport.send({ type: 'saveLayout', layout: layout as unknown as Record<string, unknown> });
+      transport.send({ type: 'saveLayout', layout });
     }, LAYOUT_SAVE_DEBOUNCE_MS);
   }, []);
 
@@ -354,7 +354,7 @@ export function useEditorActions(
     const os = getOfficeState();
     const layout = os.getLayout();
     lastSavedLayoutRef.current = structuredClone(layout);
-    transport.send({ type: 'saveLayout', layout: layout as unknown as Record<string, unknown> });
+    transport.send({ type: 'saveLayout', layout });
     editorState.isDirty = false;
     setIsDirty(false);
   }, [getOfficeState, editorState]);

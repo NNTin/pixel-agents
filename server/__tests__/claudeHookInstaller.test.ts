@@ -53,6 +53,39 @@ describe('claudeHookInstaller', () => {
     expect(hooks['PermissionRequest']).toHaveLength(1);
   });
 
+  it('installHooks replaces legacy Pixel Agents hook entries', () => {
+    const settingsPath = path.join(tmpBase, '.claude', 'settings.json');
+    const legacyEntry = {
+      matcher: '',
+      hooks: [{ type: 'command', command: 'node "~/.pixel-agents/hooks/pixel-agents-hook.js"' }],
+    };
+    fs.writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        hooks: {
+          Notification: [legacyEntry],
+          Stop: [legacyEntry],
+          PermissionRequest: [legacyEntry],
+        },
+      }),
+    );
+
+    installHooks();
+
+    const hooks = (readSettings().hooks || {}) as Record<
+      string,
+      Array<{ hooks: Array<{ command: string }> }>
+    >;
+    expect(hooks['Notification']).toHaveLength(1);
+    expect(hooks['Stop']).toHaveLength(1);
+    expect(hooks['PermissionRequest']).toHaveLength(1);
+    for (const event of ['Notification', 'Stop', 'PermissionRequest']) {
+      const command = hooks[event]?.[0]?.hooks[0]?.command;
+      expect(command).toContain('claude-hook.js');
+      expect(command).not.toContain('pixel-agents-hook.js');
+    }
+  });
+
   // 3. areHooksInstalled returns true after install
   it('areHooksInstalled returns true after install', () => {
     installHooks();

@@ -6,13 +6,13 @@
 out/**
 sprites-export/**
 logs/**
-sprites-export/**
 .github/**
 .claude/**
 .husky/**
 
 # Source and dev-time build inputs already bundled into dist/
 src/**
+adapters/**
 shared/**
 server/**
 webview-ui/**
