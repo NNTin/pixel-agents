@@ -36,6 +36,6 @@ export default defineConfig({
   // Video is configured in launch.ts (recordVideo option) and screenshots are
   // handled manually in the test's afterEach/finally blocks.
   use: {},
-  // Single worker: VS Code windows don't share well in parallel on one display
+  // Default to one worker locally; CI can override this with --workers.
   workers: 1,
 });

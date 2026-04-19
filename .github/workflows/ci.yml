@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   ci:
+    name: CI
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -189,13 +190,13 @@ jobs:
           done
           exit "$failed"
 
-  e2e:
+  linux-e2e:
+    name: Linux E2E (shard ${{ matrix.shard }}/2)
     strategy:
       fail-fast: false
       matrix:
-        # TODO: windows-latest runs by far longest. When we have more e2e tests look into parallizing windows tests in a matrix
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        shard: [1, 2]
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       PLAYWRIGHT_BROWSERS_PATH: .playwright-browsers
@@ -218,7 +219,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: .vscode-test
-          key: vscode-test-${{ runner.os }}-${{ hashFiles('e2e/global-setup.ts') }}-v2
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('e2e/global-setup.ts') }}-v3
           restore-keys: |
             vscode-test-${{ runner.os }}-
 
@@ -249,51 +250,154 @@ jobs:
         id: e2e_test
         if: steps.install_playwright_deps.outcome == 'success'
         # TODO: remove attach video on success, kept for now for debugging reasons as we are still stabilizing the E2E tests
-        shell: bash
-        env:
-          MATRIX_OS: ${{ matrix.os }}
-        run: |
-          if [ "$MATRIX_OS" = "ubuntu-latest" ]; then
-            echo "[e2e] Running Linux shards in parallel (2 shards x 2 workers)"
-
-            pids=()
-
-            npm run e2e -- --attach-videos-on-success --run-id linux-shard-1 --shard=1/2 --workers=2 &
-            pids+=("$!")
-
-            npm run e2e -- --attach-videos-on-success --run-id linux-shard-2 --shard=2/2 --workers=2 &
-            pids+=("$!")
-
-            failed=0
-            for pid in "${pids[@]}"; do
-              if ! wait "$pid"; then
-                failed=1
-              fi
-            done
-
-            exit "$failed"
-          fi
-
-          npm run e2e -- --attach-videos-on-success --run-id "$MATRIX_OS" --workers=4
+        run: npm run e2e -- --attach-videos-on-success --run-id linux-shard-${{ matrix.shard }} --shard=${{ matrix.shard }}/2 --workers=3
         continue-on-error: true
 
       - name: Upload E2E Artifacts
         if: always() && steps.install_playwright_deps.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-artifacts-${{ matrix.os }}
+          name: e2e-artifacts-linux-shard-${{ matrix.shard }}
           if-no-files-found: ignore
           path: |
             playwright-report/e2e
             test-results/e2e
 
       - name: Upload Linux Allure Results
-        if: always() && matrix.os == 'ubuntu-latest' && steps.install_playwright_deps.outcome == 'success'
+        if: always() && steps.install_playwright_deps.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-e2e-linux
+          name: allure-results-e2e-linux-shard-${{ matrix.shard }}
           if-no-files-found: warn
           path: allure-results/e2e
+
+      - name: Save VS Code Cache
+        if: always() && matrix.shard == 1 && steps.cache_vscode_restore.outputs.cache-hit != 'true' && steps.e2e_test.outcome == 'success' && hashFiles('.vscode-test/vscode-executable.txt') != ''
+        uses: actions/cache/save@v5
+        with:
+          path: .vscode-test
+          key: ${{ steps.cache_vscode_restore.outputs.cache-primary-key }}
+
+      - name: Save Playwright Cache
+        if: always() && matrix.shard == 1 && steps.cache_playwright_restore.outputs.cache-hit != 'true' && steps.install_playwright_deps.outcome == 'success' && hashFiles('.playwright-browsers/**') != ''
+        uses: actions/cache/save@v5
+        with:
+          path: .playwright-browsers
+          key: ${{ steps.cache_playwright_restore.outputs.cache-primary-key }}
+
+      - name: Write Step Summary
+        if: always()
+        shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
+          INSTALL_PLAYWRIGHT_DEPS: ${{ steps.install_playwright_deps.outcome }}
+          E2E_TEST: ${{ steps.e2e_test.outcome }}
+        run: |
+          status() {
+            if [ "$1" = "success" ]; then echo "✅ PASS"; else echo "❌ FAIL"; fi
+          }
+          {
+            echo "## Linux E2E Results (shard $SHARD/2)"
+            echo
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            echo "| Install Playwright deps | $(status "$INSTALL_PLAYWRIGHT_DEPS") |"
+            echo "| E2E tests | $(status "$E2E_TEST") |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail If Linux E2E Failed
+        if: always()
+        env:
+          INSTALL_PLAYWRIGHT_DEPS: ${{ steps.install_playwright_deps.outcome }}
+          E2E_TEST: ${{ steps.e2e_test.outcome }}
+        run: |
+          failed=0
+          for step in INSTALL_PLAYWRIGHT_DEPS E2E_TEST; do
+            val=$(printenv "$step" 2>/dev/null || echo "skipped")
+            if [ "$val" != "success" ]; then
+              echo "::error::$step failed"
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+  desktop-e2e:
+    name: ${{ matrix.label }} E2E
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS
+            run_id: macos-latest
+          - os: windows-latest
+            label: Windows
+            run_id: windows-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: .playwright-browsers
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Restore VS Code Cache
+        id: cache_vscode_restore
+        uses: actions/cache/restore@v5
+        with:
+          path: .vscode-test
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('e2e/global-setup.ts') }}-v3
+          restore-keys: |
+            vscode-test-${{ runner.os }}-
+
+      - name: Restore Playwright Cache
+        id: cache_playwright_restore
+        uses: actions/cache/restore@v5
+        with:
+          path: .playwright-browsers
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-v1
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Extension
+        run: npm run build:extension
+
+      - name: Build Webview
+        run: npm run build:webview
+
+      - name: Install Playwright Dependencies
+        id: install_playwright_deps
+        run: npx playwright install --with-deps chromium
+        continue-on-error: true
+
+      - name: E2E Tests
+        id: e2e_test
+        if: steps.install_playwright_deps.outcome == 'success'
+        run: npm run e2e -- --attach-videos-on-success --run-id ${{ matrix.run_id }} --workers=1
+        continue-on-error: true
+
+      - name: Upload E2E Artifacts
+        if: always() && steps.install_playwright_deps.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts-${{ matrix.run_id }}
+          if-no-files-found: ignore
+          path: |
+            playwright-report/e2e
+            test-results/e2e
 
       - name: Save VS Code Cache
         if: always() && steps.cache_vscode_restore.outputs.cache-hit != 'true' && steps.e2e_test.outcome == 'success' && hashFiles('.vscode-test/vscode-executable.txt') != ''
@@ -313,7 +417,7 @@ jobs:
         if: always()
         shell: bash
         env:
-          OS: ${{ matrix.os }}
+          OS_LABEL: ${{ matrix.label }}
           INSTALL_PLAYWRIGHT_DEPS: ${{ steps.install_playwright_deps.outcome }}
           E2E_TEST: ${{ steps.e2e_test.outcome }}
         run: |
@@ -321,7 +425,7 @@ jobs:
             if [ "$1" = "success" ]; then echo "✅ PASS"; else echo "❌ FAIL"; fi
           }
           {
-            echo "## E2E Results ($OS)"
+            echo "## $OS_LABEL E2E Results"
             echo
             echo "| Check | Result |"
             echo "| --- | --- |"
@@ -329,10 +433,29 @@ jobs:
             echo "| E2E tests | $(status "$E2E_TEST") |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Fail If ${{ matrix.label }} E2E Failed
+        if: always()
+        shell: bash
+        env:
+          INSTALL_PLAYWRIGHT_DEPS: ${{ steps.install_playwright_deps.outcome }}
+          E2E_TEST: ${{ steps.e2e_test.outcome }}
+        run: |
+          failed=0
+          for step in INSTALL_PLAYWRIGHT_DEPS E2E_TEST; do
+            val=$(printenv "$step" 2>/dev/null || echo "skipped")
+            if [ "$val" != "success" ]; then
+              echo "::error::$step failed"
+              failed=1
+            fi
+          done
+          exit "$failed"
+
   deploy-preview-precheck:
+    name: Deploy Precheck
+    if: always()
     needs:
       - ci
-      - e2e
+      - linux-e2e
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.deploy_precheck.outputs.ready }}
@@ -343,11 +466,39 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
-      - name: Check Vercel Configuration
+      - name: Download Linux E2E Allure Shards
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: allure-results-e2e-linux-shard-*
+          path: allure-results/e2e
+          merge-multiple: true
+
+      - name: Upload Merged Linux E2E Allure Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-e2e-linux
+          if-no-files-found: warn
+          path: allure-results/e2e
+
+      - name: Check Deploy Preconditions
         id: deploy_precheck
         shell: bash
+        env:
+          CI_RESULT: ${{ needs.ci.result }}
+          LINUX_E2E_RESULT: ${{ needs.linux-e2e.result }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name || '' }}" != "${{ github.repository }}" ]; then
+          if [ "$CI_RESULT" != "success" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=ci-blocked" >> "$GITHUB_OUTPUT"
+          elif [ "$LINUX_E2E_RESULT" != "success" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=linux-e2e-blocked" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$PR_HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "reason=fork-pr" >> "$GITHUB_OUTPUT"
           elif [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
@@ -363,12 +514,23 @@ jobs:
         shell: bash
         env:
           SKIP_REASON: ${{ steps.deploy_precheck.outputs.reason }}
+          CI_RESULT: ${{ needs.ci.result }}
+          LINUX_E2E_RESULT: ${{ needs.linux-e2e.result }}
         run: |
-          if [ "$SKIP_REASON" = "fork-pr" ]; then
-            reason="pull request comes from a fork, so deployment is skipped."
-          else
-            reason="missing one or more required Vercel secrets."
-          fi
+          case "$SKIP_REASON" in
+            ci-blocked)
+              reason="CI job result was '$CI_RESULT', so preview deployment is blocked."
+              ;;
+            linux-e2e-blocked)
+              reason="Linux E2E matrix result was '$LINUX_E2E_RESULT', so preview deployment is blocked."
+              ;;
+            fork-pr)
+              reason="pull request comes from a fork, so deployment is skipped."
+              ;;
+            *)
+              reason="missing one or more required Vercel secrets."
+              ;;
+          esac
           {
             echo "## Hosted Browser Preview"
             echo
@@ -377,6 +539,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-preview:
+    name: Deploy Preview
     needs: deploy-preview-precheck
     if: always() && needs.deploy-preview-precheck.outputs.ready == 'true'
     runs-on: ubuntu-latest
