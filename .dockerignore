@@ -1,0 +1,8 @@
+node_modules
+dist
+out
+.vscode-test
+test-results
+playwright-report
+*.vsix
+.git

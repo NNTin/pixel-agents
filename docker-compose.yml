@@ -1,0 +1,28 @@
+services:
+  standalone:
+    build: .
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/server/node_modules
+      - /app/webview-ui/node_modules
+      - ${HOME}/.claude:/root/.claude
+      - ${HOME}/.pixel-agents:/root/.pixel-agents
+    ports:
+      - "3210:3210"
+    command: npm run standalone:host -- --host 0.0.0.0
+
+  webview:
+    build: .
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/server/node_modules
+      - /app/webview-ui/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_PIXEL_AGENTS_HOST_URL: ws://localhost:3210
+    command: npm run dev -w webview-ui -- --host 0.0.0.0
+    depends_on:
+      - standalone

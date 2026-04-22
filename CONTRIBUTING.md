@@ -79,6 +79,75 @@ Vite will print a local URL (typically `http://localhost:5173`) where the mocked
 | `scripts/`    | Asset extraction and generation tooling                         |
 | `assets/`     | Bundled sprites, catalog, and default layout                    |
 
+### Running the Standalone Browser (without VS Code)
+
+The standalone host runs the full Pixel Agents backend — session detection, hook server, JSONL watching — as a plain Node process with no VS Code dependency. This lets you view the office in any browser.
+
+**Terminal 1** — start the backend:
+
+```bash
+npm run standalone:host
+```
+
+Starts an HTTP + WebSocket server at `http://127.0.0.1:3210` by default. Hooks are installed into `~/.claude/settings.json` automatically (same as the extension).
+
+Available options:
+
+| Flag                     | Default           | Description                                   |
+| ------------------------ | ----------------- | --------------------------------------------- |
+| `--port <port>`          | `3210`            | Port to listen on                             |
+| `--host <host>`          | `127.0.0.1`       | Bind address                                  |
+| `--workspace-dir <path>` | current directory | Project directory to watch for agent sessions |
+
+**Terminal 2** — start the webview dev server pointed at the host:
+
+```bash
+VITE_PIXEL_AGENTS_HOST_URL=ws://localhost:3210 npm run dev -w webview-ui
+```
+
+Then open `http://localhost:5173` in your browser.
+
+Alternatively, skip the env var and append `?host=ws://localhost:3210` to the URL directly.
+
+> **Note:** Spawning new agents (`+ Agent`) is not supported in standalone mode — only external sessions detected via hooks or JSONL scanning are shown.
+
+### Running with Docker
+
+Docker Compose runs both the standalone backend and the Vite dev server together.
+
+**Build the image** (once, or after changing dependencies):
+
+```bash
+docker compose build
+```
+
+**Start both services:**
+
+```bash
+docker compose up
+```
+
+Then open `http://localhost:5173` in your browser.
+
+The `standalone` service mounts `~/.claude` and `~/.pixel-agents` from your host so it can install hooks and read Claude session files exactly as the native setup does.
+
+To stop, press `Ctrl+C` and run `docker compose down`.
+
+### Browser Preview & Hosted Reports
+
+The browser-preview version of the webview can be built and staged for Vercel separately from the VS Code extension build.
+
+```bash
+npm run test
+npm run e2e
+npm run e2e -- --attach-videos-on-success
+npm run vercel:prepare
+```
+
+Run `npm run test:report` separately when you want the combined Allure report locally without preparing the full Vercel output.
+
+The staged Vercel output serves the standalone webview at `/webview/` and the Linux Allure report at `/reports/allure/`, combining the `e2e`, `server`, and `webview` suites. The GitHub Actions deploy job expects `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets.
+
 ## Manual Hook Testing
 
 The repo includes [server/manual-hook-events.http](server/manual-hook-events.http) for manually driving the local hook server while the extension is running.
