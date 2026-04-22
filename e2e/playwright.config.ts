@@ -35,7 +35,10 @@ export default defineConfig({
   // Playwright's built-in artifact handling only applies to browser contexts.
   // Video is configured in launch.ts (recordVideo option) and screenshots are
   // handled manually in the test's afterEach/finally blocks.
-  use: {},
+  // Video recording applies to standalone (Chromium) tests; ignored by Electron tests.
+  use: {
+    video: process.env['CI'] ? 'retain-on-failure' : 'on',
+  },
   // Default to one worker locally; CI can override this with --workers.
   workers: 1,
 });

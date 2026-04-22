@@ -12,6 +12,8 @@ import type { ViteDevServer } from 'vite';
 import { createServer } from 'vite';
 import { test } from 'vitest';
 
+import type { ServerMessage } from '../../core/src/messages.js';
+
 interface ServerConfig {
   port: number;
   token: string;
@@ -168,6 +170,46 @@ async function openLiveStandalonePage(
   await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
 }
 
+async function installMessageRecorder(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const recordedMessages: unknown[] = [];
+    const OriginalWebSocket = window.WebSocket;
+
+    const RecordingWebSocket = new Proxy(OriginalWebSocket, {
+      construct(target, args) {
+        const socket = Reflect.construct(target, args) as WebSocket;
+        socket.addEventListener('message', (event) => {
+          if (typeof event.data !== 'string') {
+            return;
+          }
+          try {
+            recordedMessages.push(JSON.parse(event.data));
+          } catch {
+            // Ignore non-JSON frames.
+          }
+        });
+        return socket;
+      },
+    });
+
+    window.WebSocket = RecordingWebSocket as typeof WebSocket;
+    (window as Window & { __pixelAgentsMessages?: unknown[] }).__pixelAgentsMessages =
+      recordedMessages;
+  });
+}
+
+async function drainRecordedMessages(page: Page): Promise<ServerMessage[]> {
+  return await page.evaluate(() => {
+    const store = (window as Window & { __pixelAgentsMessages?: unknown[] }).__pixelAgentsMessages;
+    if (!Array.isArray(store)) {
+      return [];
+    }
+    const drained = store.slice();
+    store.length = 0;
+    return drained as ServerMessage[];
+  });
+}
+
 async function enableAlwaysShowLabels(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: /Always Show Labels/ }).click();
@@ -190,7 +232,7 @@ async function postHook(
   assert.equal(response.status, 200, `Hook POST returned ${response.status.toString()}`);
 }
 
-test('standalone host propagates hook-driven agent lifecycle into the browser UI', async () => {
+test('standalone host propagates hook-driven lifecycle into the browser UI', async () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-agents-standalone-home-'));
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-agents-standalone-workspace-'));
   const vscodeShimRoot = createVsCodeShimRoot();
@@ -223,10 +265,13 @@ test('standalone host propagates hook-driven agent lifecycle into the browser UI
     browser = await chromium.launch();
     const page = await browser.newPage();
 
+    await installMessageRecorder(page);
     await openLiveStandalonePage(page, serverUrl(devServer), hostUrl);
     await enableAlwaysShowLabels(page);
+    await drainRecordedMessages(page);
 
     const sessionId = 'standalone-hooks-test-session';
+    const agentOverlay = page.locator('[data-testid="agent-overlay"]');
 
     await postHook(hookServerConfig, {
       session_id: sessionId,
@@ -235,7 +280,7 @@ test('standalone host propagates hook-driven agent lifecycle into the browser UI
       cwd: workspaceDir,
     });
 
-    await expect(page.locator('[data-testid="agent-overlay"]')).toHaveCount(0);
+    await expect(agentOverlay).toHaveCount(0);
 
     const filePath = path.join(workspaceDir, 'demo.ts');
     await postHook(hookServerConfig, {
@@ -245,27 +290,66 @@ test('standalone host propagates hook-driven agent lifecycle into the browser UI
       tool_input: { file_path: filePath },
     });
 
-    await expect(page.locator('[data-testid="agent-overlay"]')).toHaveCount(1);
+    await expect(agentOverlay).toHaveCount(1);
     await expect(page.getByText('Reading demo.ts')).toBeVisible();
+    const preToolMessages = await drainRecordedMessages(page);
+    const toolStart = preToolMessages.find(
+      (message): message is Extract<ServerMessage, { type: 'agentToolStart' }> =>
+        message.type === 'agentToolStart',
+    );
+    expect(preToolMessages.some((message) => message.type === 'agentCreated')).toBe(true);
+    expect(toolStart).toBeTruthy();
+    expect(
+      preToolMessages.some(
+        (message) => message.type === 'agentStatus' && message.status === 'active',
+      ),
+    ).toBe(true);
 
     await postHook(hookServerConfig, {
       session_id: sessionId,
       hook_event_name: 'PermissionRequest',
     });
     await expect(page.getByText('Needs approval')).toBeVisible();
+    const permissionMessages = await drainRecordedMessages(page);
+    expect(permissionMessages.some((message) => message.type === 'agentToolPermission')).toBe(true);
 
     await postHook(hookServerConfig, {
       session_id: sessionId,
-      hook_event_name: 'Stop',
+      hook_event_name: 'PostToolUse',
+    });
+    const postToolMessages = await drainRecordedMessages(page);
+    expect(
+      postToolMessages.some(
+        (message) =>
+          message.type === 'agentToolDone' &&
+          message.toolId === toolStart?.toolId &&
+          message.id === toolStart?.id,
+      ),
+    ).toBe(true);
+    await expect(page.getByText('Needs approval')).toBeVisible();
+
+    await postHook(hookServerConfig, {
+      session_id: sessionId,
+      hook_event_name: 'Notification',
+      notification_type: 'idle_prompt',
     });
     await expect(page.getByText('Might be waiting for input')).toBeVisible();
+    const notificationMessages = await drainRecordedMessages(page);
+    expect(notificationMessages.some((message) => message.type === 'agentToolsClear')).toBe(true);
+    expect(
+      notificationMessages.some(
+        (message) => message.type === 'agentStatus' && message.status === 'waiting',
+      ),
+    ).toBe(true);
 
     await postHook(hookServerConfig, {
       session_id: sessionId,
       hook_event_name: 'SessionEnd',
       reason: 'exit',
     });
-    await expect(page.locator('[data-testid="agent-overlay"]')).toHaveCount(0);
+    await expect(agentOverlay).toHaveCount(0);
+    const sessionEndMessages = await drainRecordedMessages(page);
+    expect(sessionEndMessages.some((message) => message.type === 'agentClosed')).toBe(true);
   } finally {
     if (browser) {
       await browser.close();

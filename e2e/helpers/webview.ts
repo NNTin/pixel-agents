@@ -5,6 +5,8 @@ const WEBVIEW_TIMEOUT_MS = 30_000;
 const PANEL_OPEN_TIMEOUT_MS = 15_000;
 const MIN_PANEL_HEIGHT_PX = 320;
 
+type WebviewSurface = Frame | Page;
+
 export interface WebviewSettings {
   watchAllSessions?: boolean;
   hooksEnabled?: boolean;
@@ -145,7 +147,7 @@ async function setCheckbox(modal: Locator, label: string, checked: boolean): Pro
   }
 }
 
-async function openSettingsModal(frame: Frame): Promise<Locator> {
+async function openSettingsModal(frame: WebviewSurface): Promise<Locator> {
   const settingsButton = frame.locator('button', { hasText: 'Settings' });
   await expect(settingsButton).toBeVisible({ timeout: WEBVIEW_TIMEOUT_MS });
   await settingsButton.click();
@@ -164,7 +166,7 @@ async function closeSettingsModal(settingsModal: Locator): Promise<void> {
   await expect(settingsModal).toBeHidden({ timeout: WEBVIEW_TIMEOUT_MS });
 }
 
-export async function setSettings(frame: Frame, settings: WebviewSettings): Promise<void> {
+export async function setSettings(frame: WebviewSurface, settings: WebviewSettings): Promise<void> {
   const settingsModal = await openSettingsModal(frame);
 
   if (settings.watchAllSessions !== undefined) {
@@ -191,7 +193,7 @@ export async function setSettings(frame: Frame, settings: WebviewSettings): Prom
  * - Watch All Sessions, so hooks-only external sessions are adopted
  * - Always Show Labels, so the normal office view exposes stable overlay text
  */
-export async function configureHookServerTestSettings(frame: Frame): Promise<void> {
+export async function configureHookServerTestSettings(frame: WebviewSurface): Promise<void> {
   await setSettings(frame, {
     watchAllSessions: true,
     hooksEnabled: true,
