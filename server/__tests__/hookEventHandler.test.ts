@@ -155,6 +155,27 @@ describe('HookEventHandler', () => {
     expect(msg).toBeTruthy();
   });
 
+  it('Notification idle_prompt clears hook-only tool state from PreToolUse', () => {
+    const agent = createTestAgent({
+      id: 1,
+      currentHookToolId: 'hook-123',
+      permissionSent: true,
+      hadToolsInTurn: true,
+    });
+    agents.set(1, agent);
+    handler.registerAgent('sess-1', 1);
+
+    handler.handleEvent('claude', {
+      hook_event_name: 'Notification',
+      session_id: 'sess-1',
+      notification_type: 'idle_prompt',
+    });
+
+    expect(agent.currentHookToolId).toBeUndefined();
+    const clearMsg = mockWebview.messages.find((m) => m.type === 'agentToolsClear');
+    expect(clearMsg).toBeTruthy();
+  });
+
   // ── Stop ────────────────────────────────────────────────────
 
   it('Stop marks agent waiting', () => {

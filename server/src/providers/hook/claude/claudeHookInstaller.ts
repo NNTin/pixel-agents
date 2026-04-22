@@ -7,6 +7,10 @@ import { CLAUDE_HOOK_EVENTS, CLAUDE_HOOK_SCRIPT_NAME } from './constants.js';
 
 /** Marker string used to identify Pixel Agents hook entries in Claude's settings. */
 const HOOK_SCRIPT_MARKER = CLAUDE_HOOK_SCRIPT_NAME;
+/** Legacy script name used by older Pixel Agents versions. */
+const LEGACY_HOOK_MARKER = 'pixel-agents-hook.js';
+/** Shared hooks directory marker for additional compatibility across script renames. */
+const HOOK_DIR_MARKER = HOOK_SCRIPTS_DIR.replace(/\\/g, '/');
 
 /** A single hook entry in Claude Code's ~/.claude/settings.json hooks config. */
 interface ClaudeHookEntry {
@@ -64,14 +68,16 @@ function writeClaudeSettings(settings: ClaudeSettings): void {
   }
 }
 
-/** Legacy script name (before rename to claude-hook.js). */
-const LEGACY_HOOK_MARKER = 'pixel-agents-hook.js';
-
-/** Check if a hook entry belongs to Pixel Agents (current or legacy script name). */
+/** Check if a hook entry belongs to Pixel Agents. */
 function isOurHookEntry(entry: ClaudeHookEntry): boolean {
-  return entry.hooks.some(
-    (h) => h.command.includes(HOOK_SCRIPT_MARKER) || h.command.includes(LEGACY_HOOK_MARKER),
-  );
+  return entry.hooks.some((h) => {
+    const command = h.command.replace(/\\/g, '/');
+    return (
+      command.includes(HOOK_SCRIPT_MARKER) ||
+      command.includes(LEGACY_HOOK_MARKER) ||
+      command.includes(HOOK_DIR_MARKER)
+    );
+  });
 }
 
 /** Build the shell command that Claude Code will execute for each hook event. */

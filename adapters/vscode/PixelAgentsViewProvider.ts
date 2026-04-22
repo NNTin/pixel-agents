@@ -359,6 +359,9 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
    *  when an actual hook event arrives, preserving heuristic fallback for agents
    *  where hooks aren't working (older Claude, hooks not installed, etc.) */
   registerAgentHook(agent: AgentState): void {
+    // Teammates inherit the lead's hook session routing. Registering them would
+    // steal the shared session_id from the lead and break hook delivery.
+    if (agent.leadAgentId !== undefined) return;
     this.hookEventHandler?.registerAgent(agent.sessionId, agent.id);
   }
 
