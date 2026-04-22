@@ -40,3 +40,5 @@ allure-report/
 /notes/
 /docs/e2e-*.md
 !/docs/e2e-claude-mocking.md
+
+.playwright-mcp/
