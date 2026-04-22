@@ -79,18 +79,16 @@ export function DebugView({
 
   // Listen for diagnostics response
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      const msg = event.data;
+    const unsubscribe = transport.onMessage((msg) => {
       if (msg.type === 'agentDiagnostics') {
         const map: Record<number, AgentDiagnostics> = {};
-        for (const a of msg.agents as AgentDiagnostics[]) {
+        for (const a of msg.agents as unknown as AgentDiagnostics[]) {
           map[a.id] = a;
         }
         setDiagnostics(map);
       }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    });
+    return unsubscribe;
   }, []);
 
   const renderAgentCard = (id: number) => {

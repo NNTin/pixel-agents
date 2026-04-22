@@ -1,7 +1,8 @@
 import type { ServerMessage } from '../../../core/src/messages.js';
-import { isBrowserRuntime } from '../runtime.js';
+import { isBrowserRuntime, standaloneHostUrl } from '../runtime.js';
 import { PostMessageTransport } from './postMessageTransport.js';
 import type { MessageTransport } from './types.js';
+import { WebSocketTransport } from './webSocketTransport.js';
 
 type MessageEventLike = { data: unknown };
 type MessageTargetLike = {
@@ -30,6 +31,9 @@ function createBrowserTransport(): MessageTransport {
 function createTransport(): MessageTransport {
   if (!isBrowserRuntime) {
     return new PostMessageTransport();
+  }
+  if (standaloneHostUrl) {
+    return new WebSocketTransport(standaloneHostUrl);
   }
   // Future: replace the console send stub with a real browser transport.
   return createBrowserTransport();

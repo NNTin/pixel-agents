@@ -14,11 +14,12 @@
 		"allowUnreachableCode": false,
 		"noFallthroughCasesInSwitch": true
 	},
-	"include": [
-		"adapters/vscode",
-		"server/src",
-		"core/src"
-	],
+		"include": [
+			"adapters/vscode",
+			"server/src",
+			"core/src",
+			"standalone"
+		],
 	"exclude": [
 		"node_modules",
 		"webview-ui",
