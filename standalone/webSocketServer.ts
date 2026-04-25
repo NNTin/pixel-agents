@@ -179,7 +179,9 @@ export class StandaloneWebSocketServer {
       }
 
       try {
-        this.onMessage(clientId, JSON.parse(frame.payload.toString('utf8')) as ClientMessage);
+        const parsed = JSON.parse(frame.payload.toString('utf8')) as ClientMessage;
+        console.log(`[WS] client ${clientId} →`, JSON.stringify(parsed).slice(0, 120));
+        this.onMessage(clientId, parsed);
       } catch (error) {
         console.error('[Pixel Agents] Failed to parse standalone WS message:', error);
       }

@@ -548,6 +548,10 @@ export class StandalonePixelAgentsHost {
       case 'removeExternalAssetDirectory':
         console.log(`[Pixel Agents] Standalone host ignoring unsupported message: ${message.type}`);
         return;
+      default:
+        // Relay: external clients (e.g. Node-RED) can push ServerMessage events by sending
+        // them as-is. Broadcast to all connected clients so the webview sees them.
+        this.wsServer.broadcast(message as unknown as ServerMessage);
     }
   }
 

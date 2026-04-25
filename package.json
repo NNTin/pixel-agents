@@ -8,13 +8,18 @@
     "type": "git",
     "url": "https://github.com/pablodelucca/pixel-agents"
   },
-  "workspaces": ["server", "webview-ui"],
+  "workspaces": [
+    "server",
+    "webview-ui"
+  ],
   "icon": "icon.png",
   "license": "MIT",
   "engines": {
     "vscode": "^1.105.0"
   },
-  "extensionKind": ["workspace"],
+  "extensionKind": [
+    "workspace"
+  ],
   "categories": [
     "Other"
   ],
@@ -85,6 +90,9 @@
     "lint:fix": "eslint adapters/vscode server core standalone --fix && npm run lint -w webview-ui -- --fix",
     "import-tileset": "tsx scripts/import-tileset-cli.ts",
     "standalone:host": "tsx standalone/host.ts",
+    "generate:api-specs": "tsx scripts/generate-asyncapi.ts",
+    "generate:asyncapi": "npm run generate:api-specs",
+    "generate:openapi": "npm run generate:api-specs",
     "format": "prettier --write \"adapters/vscode/**/*.ts\" \"server/**/*.ts\" \"core/src/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx,css}\" \"*.{js,mjs}\" \"webview-ui/*.{js,ts}\"",
     "format:check": "prettier --check \"adapters/vscode/**/*.ts\" \"server/**/*.ts\" \"core/src/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx,css}\" \"*.{js,mjs}\" \"webview-ui/*.{js,ts}\"",
     "test:webview": "npm run test -w webview-ui",
@@ -115,6 +123,7 @@
     "npm-run-all": "^4.1.5",
     "pngjs": "^7.0.0",
     "prettier": "^3.8.1",
+    "ts-json-schema-generator": "^2.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0"

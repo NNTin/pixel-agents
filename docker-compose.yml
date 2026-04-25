@@ -10,6 +10,8 @@ services:
       - ${HOME}/.pixel-agents:/root/.pixel-agents
     ports:
       - "3210:3210"
+    networks:
+      - pixel-agents
     command: npm run standalone:host -- --host 0.0.0.0
 
   webview:
@@ -26,3 +28,7 @@ services:
     command: npm run dev -w webview-ui -- --host 0.0.0.0
     depends_on:
       - standalone
+
+networks:
+  pixel-agents:
+    external: true

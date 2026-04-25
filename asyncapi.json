@@ -1,0 +1,2764 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "Pixel Agents WebSocket API",
+    "version": "1.3.0",
+    "description": "WebSocket protocol for the Pixel Agents standalone host. Connect to ws://localhost:3210/ws. Send webviewReady after connecting to receive the initial bootstrap."
+  },
+  "servers": {
+    "standalone": {
+      "host": "localhost:3210",
+      "protocol": "ws",
+      "description": "Standalone host (default port)"
+    }
+  },
+  "channels": {
+    "ws": {
+      "address": "/ws",
+      "messages": {
+        "providerCapabilities": {
+          "$ref": "#/components/messages/providerCapabilities"
+        },
+        "agentCreated": {
+          "$ref": "#/components/messages/agentCreated"
+        },
+        "agentClosed": {
+          "$ref": "#/components/messages/agentClosed"
+        },
+        "agentSelected": {
+          "$ref": "#/components/messages/agentSelected"
+        },
+        "existingAgents": {
+          "$ref": "#/components/messages/existingAgents"
+        },
+        "agentStatus": {
+          "$ref": "#/components/messages/agentStatus"
+        },
+        "agentToolStart": {
+          "$ref": "#/components/messages/agentToolStart"
+        },
+        "agentToolDone": {
+          "$ref": "#/components/messages/agentToolDone"
+        },
+        "agentToolsClear": {
+          "$ref": "#/components/messages/agentToolsClear"
+        },
+        "agentToolPermission": {
+          "$ref": "#/components/messages/agentToolPermission"
+        },
+        "agentToolPermissionClear": {
+          "$ref": "#/components/messages/agentToolPermissionClear"
+        },
+        "subagentToolStart": {
+          "$ref": "#/components/messages/subagentToolStart"
+        },
+        "subagentToolDone": {
+          "$ref": "#/components/messages/subagentToolDone"
+        },
+        "subagentClear": {
+          "$ref": "#/components/messages/subagentClear"
+        },
+        "subagentToolPermission": {
+          "$ref": "#/components/messages/subagentToolPermission"
+        },
+        "agentTeamInfo": {
+          "$ref": "#/components/messages/agentTeamInfo"
+        },
+        "agentTokenUsage": {
+          "$ref": "#/components/messages/agentTokenUsage"
+        },
+        "layoutLoaded": {
+          "$ref": "#/components/messages/layoutLoaded"
+        },
+        "furnitureAssetsLoaded": {
+          "$ref": "#/components/messages/furnitureAssetsLoaded"
+        },
+        "characterSpritesLoaded": {
+          "$ref": "#/components/messages/characterSpritesLoaded"
+        },
+        "floorTilesLoaded": {
+          "$ref": "#/components/messages/floorTilesLoaded"
+        },
+        "wallTilesLoaded": {
+          "$ref": "#/components/messages/wallTilesLoaded"
+        },
+        "settingsLoaded": {
+          "$ref": "#/components/messages/settingsLoaded"
+        },
+        "externalAssetDirectoriesUpdated": {
+          "$ref": "#/components/messages/externalAssetDirectoriesUpdated"
+        },
+        "workspaceFolders": {
+          "$ref": "#/components/messages/workspaceFolders"
+        },
+        "agentDiagnostics": {
+          "$ref": "#/components/messages/agentDiagnostics"
+        },
+        "webviewReady": {
+          "$ref": "#/components/messages/webviewReady"
+        },
+        "launchAgent": {
+          "$ref": "#/components/messages/launchAgent"
+        },
+        "focusAgent": {
+          "$ref": "#/components/messages/focusAgent"
+        },
+        "closeAgent": {
+          "$ref": "#/components/messages/closeAgent"
+        },
+        "saveAgentSeats": {
+          "$ref": "#/components/messages/saveAgentSeats"
+        },
+        "saveLayout": {
+          "$ref": "#/components/messages/saveLayout"
+        },
+        "setSoundEnabled": {
+          "$ref": "#/components/messages/setSoundEnabled"
+        },
+        "setLastSeenVersion": {
+          "$ref": "#/components/messages/setLastSeenVersion"
+        },
+        "setAlwaysShowLabels": {
+          "$ref": "#/components/messages/setAlwaysShowLabels"
+        },
+        "setHooksEnabled": {
+          "$ref": "#/components/messages/setHooksEnabled"
+        },
+        "setHooksInfoShown": {
+          "$ref": "#/components/messages/setHooksInfoShown"
+        },
+        "setWatchAllSessions": {
+          "$ref": "#/components/messages/setWatchAllSessions"
+        },
+        "exportLayout": {
+          "$ref": "#/components/messages/exportLayout"
+        },
+        "importLayout": {
+          "$ref": "#/components/messages/importLayout"
+        },
+        "openSessionsFolder": {
+          "$ref": "#/components/messages/openSessionsFolder"
+        },
+        "addExternalAssetDirectory": {
+          "$ref": "#/components/messages/addExternalAssetDirectory"
+        },
+        "removeExternalAssetDirectory": {
+          "$ref": "#/components/messages/removeExternalAssetDirectory"
+        },
+        "requestDiagnostics": {
+          "$ref": "#/components/messages/requestDiagnostics"
+        }
+      }
+    }
+  },
+  "operations": {
+    "receiveMessage": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/ws"
+      },
+      "summary": "Messages sent from the server to the browser client",
+      "messages": [
+        {
+          "$ref": "#/channels/ws/messages/providerCapabilities"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentCreated"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentClosed"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentSelected"
+        },
+        {
+          "$ref": "#/channels/ws/messages/existingAgents"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentStatus"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentToolStart"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentToolDone"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentToolsClear"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentToolPermission"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentToolPermissionClear"
+        },
+        {
+          "$ref": "#/channels/ws/messages/subagentToolStart"
+        },
+        {
+          "$ref": "#/channels/ws/messages/subagentToolDone"
+        },
+        {
+          "$ref": "#/channels/ws/messages/subagentClear"
+        },
+        {
+          "$ref": "#/channels/ws/messages/subagentToolPermission"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentTeamInfo"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentTokenUsage"
+        },
+        {
+          "$ref": "#/channels/ws/messages/layoutLoaded"
+        },
+        {
+          "$ref": "#/channels/ws/messages/furnitureAssetsLoaded"
+        },
+        {
+          "$ref": "#/channels/ws/messages/characterSpritesLoaded"
+        },
+        {
+          "$ref": "#/channels/ws/messages/floorTilesLoaded"
+        },
+        {
+          "$ref": "#/channels/ws/messages/wallTilesLoaded"
+        },
+        {
+          "$ref": "#/channels/ws/messages/settingsLoaded"
+        },
+        {
+          "$ref": "#/channels/ws/messages/externalAssetDirectoriesUpdated"
+        },
+        {
+          "$ref": "#/channels/ws/messages/workspaceFolders"
+        },
+        {
+          "$ref": "#/channels/ws/messages/agentDiagnostics"
+        }
+      ]
+    },
+    "sendMessage": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/ws"
+      },
+      "summary": "Messages sent from the browser client to the server",
+      "messages": [
+        {
+          "$ref": "#/channels/ws/messages/webviewReady"
+        },
+        {
+          "$ref": "#/channels/ws/messages/launchAgent"
+        },
+        {
+          "$ref": "#/channels/ws/messages/focusAgent"
+        },
+        {
+          "$ref": "#/channels/ws/messages/closeAgent"
+        },
+        {
+          "$ref": "#/channels/ws/messages/saveAgentSeats"
+        },
+        {
+          "$ref": "#/channels/ws/messages/saveLayout"
+        },
+        {
+          "$ref": "#/channels/ws/messages/setSoundEnabled"
+        },
+        {
+          "$ref": "#/channels/ws/messages/setLastSeenVersion"
+        },
+        {
+          "$ref": "#/channels/ws/messages/setAlwaysShowLabels"
+        },
+        {
+          "$ref": "#/channels/ws/messages/setHooksEnabled"
+        },
+        {
+          "$ref": "#/channels/ws/messages/setHooksInfoShown"
+        },
+        {
+          "$ref": "#/channels/ws/messages/setWatchAllSessions"
+        },
+        {
+          "$ref": "#/channels/ws/messages/exportLayout"
+        },
+        {
+          "$ref": "#/channels/ws/messages/importLayout"
+        },
+        {
+          "$ref": "#/channels/ws/messages/openSessionsFolder"
+        },
+        {
+          "$ref": "#/channels/ws/messages/addExternalAssetDirectory"
+        },
+        {
+          "$ref": "#/channels/ws/messages/removeExternalAssetDirectory"
+        },
+        {
+          "$ref": "#/channels/ws/messages/requestDiagnostics"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "providerCapabilities": {
+        "name": "providerCapabilities",
+        "title": "providerCapabilities",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "providerCapabilities"
+            },
+            "readingTools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tool names the webview should render with the \"reading\" animation."
+            },
+            "subagentToolNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tool names that spawn sub-agent characters (Task/Agent on Claude)."
+            }
+          },
+          "required": [
+            "type",
+            "readingTools",
+            "subagentToolNames"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentCreated": {
+        "name": "agentCreated",
+        "title": "agentCreated",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentCreated"
+            },
+            "id": {
+              "type": "number"
+            },
+            "folderName": {
+              "type": "string"
+            },
+            "isExternal": {
+              "type": "boolean"
+            },
+            "isTeammate": {
+              "type": "boolean"
+            },
+            "teammateName": {
+              "type": "string"
+            },
+            "parentAgentId": {
+              "type": "number"
+            },
+            "teamName": {
+              "type": "string"
+            },
+            "hooksOnly": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentClosed": {
+        "name": "agentClosed",
+        "title": "agentClosed",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentClosed"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentSelected": {
+        "name": "agentSelected",
+        "title": "agentSelected",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentSelected"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "existingAgents": {
+        "name": "existingAgents",
+        "title": "existingAgents",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "existingAgents"
+            },
+            "agents": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "agentMeta": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "palette": {
+                    "type": "number"
+                  },
+                  "hueShift": {
+                    "type": "number"
+                  },
+                  "seatId": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "folderNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "externalAgents": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "agents",
+            "agentMeta",
+            "folderNames",
+            "externalAgents"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentStatus": {
+        "name": "agentStatus",
+        "title": "agentStatus",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentStatus"
+            },
+            "id": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "waiting"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentToolStart": {
+        "name": "agentToolStart",
+        "title": "agentToolStart",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentToolStart"
+            },
+            "id": {
+              "type": "number"
+            },
+            "toolId": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "toolName": {
+              "type": "string"
+            },
+            "permissionActive": {
+              "type": "boolean"
+            },
+            "runInBackground": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "toolId",
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentToolDone": {
+        "name": "agentToolDone",
+        "title": "agentToolDone",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentToolDone"
+            },
+            "id": {
+              "type": "number"
+            },
+            "toolId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "toolId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentToolsClear": {
+        "name": "agentToolsClear",
+        "title": "agentToolsClear",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentToolsClear"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentToolPermission": {
+        "name": "agentToolPermission",
+        "title": "agentToolPermission",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentToolPermission"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentToolPermissionClear": {
+        "name": "agentToolPermissionClear",
+        "title": "agentToolPermissionClear",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentToolPermissionClear"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "subagentToolStart": {
+        "name": "subagentToolStart",
+        "title": "subagentToolStart",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "subagentToolStart"
+            },
+            "id": {
+              "type": "number"
+            },
+            "parentToolId": {
+              "type": "string"
+            },
+            "toolId": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "parentToolId",
+            "toolId",
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "subagentToolDone": {
+        "name": "subagentToolDone",
+        "title": "subagentToolDone",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "subagentToolDone"
+            },
+            "id": {
+              "type": "number"
+            },
+            "parentToolId": {
+              "type": "string"
+            },
+            "toolId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "parentToolId",
+            "toolId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "subagentClear": {
+        "name": "subagentClear",
+        "title": "subagentClear",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "subagentClear"
+            },
+            "id": {
+              "type": "number"
+            },
+            "parentToolId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "parentToolId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "subagentToolPermission": {
+        "name": "subagentToolPermission",
+        "title": "subagentToolPermission",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "subagentToolPermission"
+            },
+            "id": {
+              "type": "number"
+            },
+            "parentToolId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "parentToolId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentTeamInfo": {
+        "name": "agentTeamInfo",
+        "title": "agentTeamInfo",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentTeamInfo"
+            },
+            "id": {
+              "type": "number"
+            },
+            "teamName": {
+              "type": "string"
+            },
+            "agentName": {
+              "type": "string"
+            },
+            "isTeamLead": {
+              "type": "boolean"
+            },
+            "leadAgentId": {
+              "type": "number"
+            },
+            "teamUsesTmux": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentTokenUsage": {
+        "name": "agentTokenUsage",
+        "title": "agentTokenUsage",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentTokenUsage"
+            },
+            "id": {
+              "type": "number"
+            },
+            "inputTokens": {
+              "type": "number"
+            },
+            "outputTokens": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "inputTokens",
+            "outputTokens"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "layoutLoaded": {
+        "name": "layoutLoaded",
+        "title": "layoutLoaded",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "layoutLoaded"
+            },
+            "layout": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/OfficeLayout"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "wasReset": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "layout"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "furnitureAssetsLoaded": {
+        "name": "furnitureAssetsLoaded",
+        "title": "furnitureAssetsLoaded",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "furnitureAssetsLoaded"
+            },
+            "catalog": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/FurnitureAssetMessage"
+              }
+            },
+            "sprites": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "catalog",
+            "sprites"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "characterSpritesLoaded": {
+        "name": "characterSpritesLoaded",
+        "title": "characterSpritesLoaded",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "characterSpritesLoaded"
+            },
+            "characters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "down": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "up": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "down",
+                  "up",
+                  "right"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "characters"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "floorTilesLoaded": {
+        "name": "floorTilesLoaded",
+        "title": "floorTilesLoaded",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "floorTilesLoaded"
+            },
+            "sprites": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "sprites"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "wallTilesLoaded": {
+        "name": "wallTilesLoaded",
+        "title": "wallTilesLoaded",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "wallTilesLoaded"
+            },
+            "sets": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "sets"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "settingsLoaded": {
+        "name": "settingsLoaded",
+        "title": "settingsLoaded",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "settingsLoaded"
+            },
+            "soundEnabled": {
+              "type": "boolean"
+            },
+            "lastSeenVersion": {
+              "type": "string"
+            },
+            "extensionVersion": {
+              "type": "string"
+            },
+            "watchAllSessions": {
+              "type": "boolean"
+            },
+            "alwaysShowLabels": {
+              "type": "boolean"
+            },
+            "hooksEnabled": {
+              "type": "boolean"
+            },
+            "hooksInfoShown": {
+              "type": "boolean"
+            },
+            "externalAssetDirectories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "soundEnabled",
+            "lastSeenVersion",
+            "extensionVersion",
+            "watchAllSessions",
+            "alwaysShowLabels",
+            "hooksEnabled",
+            "hooksInfoShown",
+            "externalAssetDirectories"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "externalAssetDirectoriesUpdated": {
+        "name": "externalAssetDirectoriesUpdated",
+        "title": "externalAssetDirectoriesUpdated",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "externalAssetDirectoriesUpdated"
+            },
+            "dirs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "dirs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "workspaceFolders": {
+        "name": "workspaceFolders",
+        "title": "workspaceFolders",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "workspaceFolders"
+            },
+            "folders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "path"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "folders"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "agentDiagnostics": {
+        "name": "agentDiagnostics",
+        "title": "agentDiagnostics",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agentDiagnostics"
+            },
+            "agents": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          },
+          "required": [
+            "type",
+            "agents"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "webviewReady": {
+        "name": "webviewReady",
+        "title": "webviewReady",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "webviewReady"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "launchAgent": {
+        "name": "launchAgent",
+        "title": "launchAgent",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "launchAgent"
+            },
+            "folderPath": {
+              "type": "string"
+            },
+            "bypassPermissions": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "focusAgent": {
+        "name": "focusAgent",
+        "title": "focusAgent",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "focusAgent"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "closeAgent": {
+        "name": "closeAgent",
+        "title": "closeAgent",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "closeAgent"
+            },
+            "id": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "saveAgentSeats": {
+        "name": "saveAgentSeats",
+        "title": "saveAgentSeats",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "saveAgentSeats"
+            },
+            "seats": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "palette": {
+                    "type": "number"
+                  },
+                  "hueShift": {
+                    "type": "number"
+                  },
+                  "seatId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "palette",
+                  "hueShift",
+                  "seatId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "seats"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "saveLayout": {
+        "name": "saveLayout",
+        "title": "saveLayout",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "saveLayout"
+            },
+            "layout": {
+              "$ref": "#/definitions/OfficeLayout"
+            }
+          },
+          "required": [
+            "type",
+            "layout"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "setSoundEnabled": {
+        "name": "setSoundEnabled",
+        "title": "setSoundEnabled",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "setSoundEnabled"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "enabled"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "setLastSeenVersion": {
+        "name": "setLastSeenVersion",
+        "title": "setLastSeenVersion",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "setLastSeenVersion"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "version"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "setAlwaysShowLabels": {
+        "name": "setAlwaysShowLabels",
+        "title": "setAlwaysShowLabels",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "setAlwaysShowLabels"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "enabled"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "setHooksEnabled": {
+        "name": "setHooksEnabled",
+        "title": "setHooksEnabled",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "setHooksEnabled"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "enabled"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "setHooksInfoShown": {
+        "name": "setHooksInfoShown",
+        "title": "setHooksInfoShown",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "setHooksInfoShown"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "setWatchAllSessions": {
+        "name": "setWatchAllSessions",
+        "title": "setWatchAllSessions",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "setWatchAllSessions"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "enabled"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "exportLayout": {
+        "name": "exportLayout",
+        "title": "exportLayout",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "exportLayout"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "importLayout": {
+        "name": "importLayout",
+        "title": "importLayout",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "importLayout"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "openSessionsFolder": {
+        "name": "openSessionsFolder",
+        "title": "openSessionsFolder",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "openSessionsFolder"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "addExternalAssetDirectory": {
+        "name": "addExternalAssetDirectory",
+        "title": "addExternalAssetDirectory",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "addExternalAssetDirectory"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "removeExternalAssetDirectory": {
+        "name": "removeExternalAssetDirectory",
+        "title": "removeExternalAssetDirectory",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "removeExternalAssetDirectory"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "requestDiagnostics": {
+        "name": "requestDiagnostics",
+        "title": "requestDiagnostics",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "requestDiagnostics"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "schemas": {
+      "ServerMessage": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "providerCapabilities"
+              },
+              "readingTools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Tool names the webview should render with the \"reading\" animation."
+              },
+              "subagentToolNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Tool names that spawn sub-agent characters (Task/Agent on Claude)."
+              }
+            },
+            "required": [
+              "type",
+              "readingTools",
+              "subagentToolNames"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentCreated"
+              },
+              "id": {
+                "type": "number"
+              },
+              "folderName": {
+                "type": "string"
+              },
+              "isExternal": {
+                "type": "boolean"
+              },
+              "isTeammate": {
+                "type": "boolean"
+              },
+              "teammateName": {
+                "type": "string"
+              },
+              "parentAgentId": {
+                "type": "number"
+              },
+              "teamName": {
+                "type": "string"
+              },
+              "hooksOnly": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentClosed"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentSelected"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "existingAgents"
+              },
+              "agents": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "agentMeta": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "palette": {
+                      "type": "number"
+                    },
+                    "hueShift": {
+                      "type": "number"
+                    },
+                    "seatId": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "folderNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "externalAgents": {
+                "type": "array",
+                "items": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "required": [
+              "type",
+              "agents",
+              "agentMeta",
+              "folderNames",
+              "externalAgents"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentStatus"
+              },
+              "id": {
+                "type": "number"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "waiting"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentToolStart"
+              },
+              "id": {
+                "type": "number"
+              },
+              "toolId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "toolName": {
+                "type": "string"
+              },
+              "permissionActive": {
+                "type": "boolean"
+              },
+              "runInBackground": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "toolId",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentToolDone"
+              },
+              "id": {
+                "type": "number"
+              },
+              "toolId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "toolId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentToolsClear"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentToolPermission"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentToolPermissionClear"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "subagentToolStart"
+              },
+              "id": {
+                "type": "number"
+              },
+              "parentToolId": {
+                "type": "string"
+              },
+              "toolId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "parentToolId",
+              "toolId",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "subagentToolDone"
+              },
+              "id": {
+                "type": "number"
+              },
+              "parentToolId": {
+                "type": "string"
+              },
+              "toolId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "parentToolId",
+              "toolId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "subagentClear"
+              },
+              "id": {
+                "type": "number"
+              },
+              "parentToolId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "parentToolId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "subagentToolPermission"
+              },
+              "id": {
+                "type": "number"
+              },
+              "parentToolId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "parentToolId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentTeamInfo"
+              },
+              "id": {
+                "type": "number"
+              },
+              "teamName": {
+                "type": "string"
+              },
+              "agentName": {
+                "type": "string"
+              },
+              "isTeamLead": {
+                "type": "boolean"
+              },
+              "leadAgentId": {
+                "type": "number"
+              },
+              "teamUsesTmux": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentTokenUsage"
+              },
+              "id": {
+                "type": "number"
+              },
+              "inputTokens": {
+                "type": "number"
+              },
+              "outputTokens": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "inputTokens",
+              "outputTokens"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "layoutLoaded"
+              },
+              "layout": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/OfficeLayout"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "wasReset": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "layout"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "furnitureAssetsLoaded"
+              },
+              "catalog": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/FurnitureAssetMessage"
+                }
+              },
+              "sprites": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "type",
+              "catalog",
+              "sprites"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "characterSpritesLoaded"
+              },
+              "characters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "down": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "up": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "right": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "down",
+                    "up",
+                    "right"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "type",
+              "characters"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "floorTilesLoaded"
+              },
+              "sprites": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "type",
+              "sprites"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "wallTilesLoaded"
+              },
+              "sets": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "type",
+              "sets"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "settingsLoaded"
+              },
+              "soundEnabled": {
+                "type": "boolean"
+              },
+              "lastSeenVersion": {
+                "type": "string"
+              },
+              "extensionVersion": {
+                "type": "string"
+              },
+              "watchAllSessions": {
+                "type": "boolean"
+              },
+              "alwaysShowLabels": {
+                "type": "boolean"
+              },
+              "hooksEnabled": {
+                "type": "boolean"
+              },
+              "hooksInfoShown": {
+                "type": "boolean"
+              },
+              "externalAssetDirectories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "type",
+              "soundEnabled",
+              "lastSeenVersion",
+              "extensionVersion",
+              "watchAllSessions",
+              "alwaysShowLabels",
+              "hooksEnabled",
+              "hooksInfoShown",
+              "externalAssetDirectories"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "externalAssetDirectoriesUpdated"
+              },
+              "dirs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "type",
+              "dirs"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "workspaceFolders"
+              },
+              "folders": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "type",
+              "folders"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "agentDiagnostics"
+              },
+              "agents": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            "required": [
+              "type",
+              "agents"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "OfficeLayout": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "cols": {
+            "type": "number"
+          },
+          "rows": {
+            "type": "number"
+          },
+          "tiles": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "furniture": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/PlacedFurniture"
+            }
+          },
+          "tileColors": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/ColorValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "version",
+          "cols",
+          "rows",
+          "tiles",
+          "furniture"
+        ],
+        "additionalProperties": false,
+        "description": "Complete office layout data"
+      },
+      "PlacedFurniture": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "uid": {
+            "type": "string"
+          },
+          "col": {
+            "type": "number"
+          },
+          "row": {
+            "type": "number"
+          },
+          "color": {
+            "$ref": "#/definitions/ColorValue"
+          }
+        },
+        "required": [
+          "type",
+          "uid",
+          "col",
+          "row"
+        ],
+        "additionalProperties": false,
+        "description": "A placed furniture item in the layout"
+      },
+      "ColorValue": {
+        "type": "object",
+        "properties": {
+          "h": {
+            "type": "number"
+          },
+          "s": {
+            "type": "number"
+          },
+          "b": {
+            "type": "number"
+          },
+          "c": {
+            "type": "number"
+          },
+          "colorize": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "h",
+          "s",
+          "b",
+          "c"
+        ],
+        "additionalProperties": false,
+        "description": "Color value for floor/wall/furniture colorization"
+      },
+      "FurnitureAssetMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "footprintW": {
+            "type": "number"
+          },
+          "footprintH": {
+            "type": "number"
+          },
+          "isDesk": {
+            "type": "boolean"
+          },
+          "canPlaceOnWalls": {
+            "type": "boolean"
+          },
+          "groupId": {
+            "type": "string"
+          },
+          "canPlaceOnSurfaces": {
+            "type": "boolean"
+          },
+          "backgroundTiles": {
+            "type": "number"
+          },
+          "orientation": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "mirrorSide": {
+            "type": "boolean"
+          },
+          "rotationScheme": {
+            "type": "string"
+          },
+          "animationGroup": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "label",
+          "category",
+          "file",
+          "width",
+          "height",
+          "footprintW",
+          "footprintH",
+          "isDesk",
+          "canPlaceOnWalls"
+        ],
+        "additionalProperties": false,
+        "description": "Furniture asset metadata sent in furnitureAssetsLoaded message"
+      },
+      "ClientMessage": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "webviewReady"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "launchAgent"
+              },
+              "folderPath": {
+                "type": "string"
+              },
+              "bypassPermissions": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "focusAgent"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "closeAgent"
+              },
+              "id": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "saveAgentSeats"
+              },
+              "seats": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "palette": {
+                      "type": "number"
+                    },
+                    "hueShift": {
+                      "type": "number"
+                    },
+                    "seatId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "palette",
+                    "hueShift",
+                    "seatId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "type",
+              "seats"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "saveLayout"
+              },
+              "layout": {
+                "$ref": "#/definitions/OfficeLayout"
+              }
+            },
+            "required": [
+              "type",
+              "layout"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "setSoundEnabled"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "enabled"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "setLastSeenVersion"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "version"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "setAlwaysShowLabels"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "enabled"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "setHooksEnabled"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "enabled"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "setHooksInfoShown"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "setWatchAllSessions"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "enabled"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "exportLayout"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "importLayout"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "openSessionsFolder"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "addExternalAssetDirectory"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "removeExternalAssetDirectory"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "requestDiagnostics"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  }
+}
