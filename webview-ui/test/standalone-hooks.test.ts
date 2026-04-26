@@ -172,8 +172,14 @@ async function openLiveStandalonePage(
 
 async function installMessageRecorder(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    type RecorderGlobal = typeof globalThis & {
+      __pixelAgentsMessages?: unknown[];
+      WebSocket: typeof WebSocket;
+    };
+
+    const browserGlobal = globalThis as RecorderGlobal;
     const recordedMessages: unknown[] = [];
-    const OriginalWebSocket = window.WebSocket;
+    const OriginalWebSocket = browserGlobal.WebSocket;
 
     const RecordingWebSocket = new Proxy(OriginalWebSocket, {
       construct(target, args) {
@@ -192,15 +198,15 @@ async function installMessageRecorder(page: Page): Promise<void> {
       },
     });
 
-    window.WebSocket = RecordingWebSocket as typeof WebSocket;
-    (window as Window & { __pixelAgentsMessages?: unknown[] }).__pixelAgentsMessages =
-      recordedMessages;
+    browserGlobal.WebSocket = RecordingWebSocket as typeof WebSocket;
+    browserGlobal.__pixelAgentsMessages = recordedMessages;
   });
 }
 
 async function drainRecordedMessages(page: Page): Promise<ServerMessage[]> {
   return await page.evaluate(() => {
-    const store = (window as Window & { __pixelAgentsMessages?: unknown[] }).__pixelAgentsMessages;
+    const store = (globalThis as typeof globalThis & { __pixelAgentsMessages?: unknown[] })
+      .__pixelAgentsMessages;
     if (!Array.isArray(store)) {
       return [];
     }
