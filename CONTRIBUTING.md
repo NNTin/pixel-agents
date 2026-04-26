@@ -113,7 +113,7 @@ Alternatively, skip the env var and append `?host=ws://localhost:3210` to the UR
 
 ### Running with Docker
 
-Docker Compose runs both the standalone backend and the Vite dev server together.
+Docker Compose runs the standalone backend by default. The Vite webview is opt-in and only meant for local debugging.
 
 **Build the image** (once, or after changing dependencies):
 
@@ -121,13 +121,21 @@ Docker Compose runs both the standalone backend and the Vite dev server together
 docker compose build
 ```
 
-**Start both services:**
+**Start the standalone backend only:**
 
 ```bash
 docker compose up
 ```
 
-Then open `http://localhost:5173` in your browser.
+This integrated setup keeps the standalone host private on the `pixel-agents` Docker network with no published host ports.
+
+**Start the local debug webview when needed:**
+
+```bash
+docker compose --profile debug up webview
+```
+
+The debug webview binds to `http://127.0.0.1:5173` and connects to `https://pp.lair.nntin.xyz`.
 
 The `standalone` service mounts `~/.claude` and `~/.pixel-agents` from your host so it can install hooks and read Claude session files exactly as the native setup does.
 

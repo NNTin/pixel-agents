@@ -1,3 +1,5 @@
+name: pixel-agents
+
 services:
   standalone:
     build: .
@@ -8,13 +10,25 @@ services:
       - /app/webview-ui/node_modules
       - ${HOME}/.claude:/root/.claude
       - ${HOME}/.pixel-agents:/root/.pixel-agents
-    ports:
-      - "3210:3210"
+    expose:
+      - "3210"
     networks:
       - pixel-agents
+    restart: unless-stopped
     command: npm run standalone:host -- --host 0.0.0.0
+    logging:
+      driver: "loki"
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
+        loki-batch-size: "102400"
+        loki-external-labels: "service=pixel-agents-standalone,component=backend,environment=production"
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
 
   webview:
+    profiles: ["debug"]
     build: .
     volumes:
       - .:/app
@@ -22,12 +36,24 @@ services:
       - /app/server/node_modules
       - /app/webview-ui/node_modules
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     environment:
-      VITE_PIXEL_AGENTS_HOST_URL: ws://localhost:3210
+      # need to investigate if this works, formerely ws://localhost:3210
+      VITE_PIXEL_AGENTS_HOST_URL: https://pp.lair.nntin.xyz
     command: npm run dev -w webview-ui -- --host 0.0.0.0
     depends_on:
       - standalone
+    restart: unless-stopped
+    logging:
+      driver: "loki"
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "3"
+        loki-batch-size: "102400"
+        loki-external-labels: "service=pixel-agents-webview,component=debug-ui,environment=production"
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
 
 networks:
   pixel-agents:
