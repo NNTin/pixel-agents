@@ -4,6 +4,8 @@ import * as net from 'net';
 
 import type { ClientMessage, ServerMessage } from '../core/src/messages.js';
 
+export type ClientRole = 'viewer' | 'producer';
+
 interface ParsedFrame {
   bytesConsumed: number;
   opcode: number;
@@ -12,6 +14,7 @@ interface ParsedFrame {
 
 interface ConnectedClient {
   id: number;
+  role: ClientRole;
   socket: net.Socket;
   buffer: Buffer;
 }
@@ -93,10 +96,12 @@ export class StandaloneWebSocketServer {
 
   constructor(
     server: http.Server,
-    private readonly onMessage: (clientId: number, message: ClientMessage) => void,
+    private readonly onMessage: (clientId: number, role: ClientRole, message: ClientMessage) => void,
   ) {
     server.on('upgrade', (request, socket) => {
-      if (request.url !== '/ws') {
+      const role: ClientRole | null =
+        request.url === '/ws' ? 'viewer' : request.url === '/ws/producer' ? 'producer' : null;
+      if (!role) {
         socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
         socket.destroy();
         return;
@@ -122,6 +127,7 @@ export class StandaloneWebSocketServer {
 
       const client: ConnectedClient = {
         id: this.nextClientId++,
+        role,
         socket: socket as net.Socket,
         buffer: Buffer.alloc(0),
       };
@@ -141,8 +147,10 @@ export class StandaloneWebSocketServer {
   }
 
   broadcast(message: ServerMessage): void {
-    for (const clientId of this.clients.keys()) {
-      this.send(clientId, message);
+    for (const [clientId, client] of this.clients) {
+      if (client.role === 'viewer') {
+        this.send(clientId, message);
+      }
     }
   }
 
@@ -180,8 +188,8 @@ export class StandaloneWebSocketServer {
 
       try {
         const parsed = JSON.parse(frame.payload.toString('utf8')) as ClientMessage;
-        console.log(`[WS] client ${clientId} →`, JSON.stringify(parsed).slice(0, 120));
-        this.onMessage(clientId, parsed);
+        console.log(`[WS] client ${clientId} (${client.role}) →`, JSON.stringify(parsed).slice(0, 120));
+        this.onMessage(clientId, client.role, parsed);
       } catch (error) {
         console.error('[Pixel Agents] Failed to parse standalone WS message:', error);
       }

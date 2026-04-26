@@ -1,4 +1,4 @@
-import type { ServerMessage } from '../../../core/src/messages.js';
+import type { ClientMessage, ServerMessage } from '../../../core/src/messages.js';
 import { isBrowserRuntime, standaloneHostUrl } from '../runtime.js';
 import { PostMessageTransport } from './postMessageTransport.js';
 import type { MessageTransport } from './types.js';
@@ -9,6 +9,24 @@ type MessageTargetLike = {
   addEventListener?: (type: 'message', listener: (event: MessageEventLike) => void) => void;
   removeEventListener?: (type: 'message', listener: (event: MessageEventLike) => void) => void;
 };
+
+// Messages a read-only browser viewer is allowed to send.
+const VIEWER_ALLOWED_MESSAGES = new Set<ClientMessage['type']>([
+  'webviewReady',
+  'requestDiagnostics',
+]);
+
+function wrapReadOnly(inner: MessageTransport): MessageTransport {
+  return {
+    send: (msg) => {
+      if (VIEWER_ALLOWED_MESSAGES.has(msg.type)) {
+        inner.send(msg);
+      }
+    },
+    onMessage: inner.onMessage.bind(inner),
+    dispose: inner.dispose.bind(inner),
+  };
+}
 
 function createBrowserTransport(): MessageTransport {
   const messageTarget = globalThis as typeof globalThis & MessageTargetLike;
@@ -33,7 +51,8 @@ function createTransport(): MessageTransport {
     return new PostMessageTransport();
   }
   if (standaloneHostUrl) {
-    return new WebSocketTransport(standaloneHostUrl);
+    // Browser viewers are read-only; mutating messages are dropped at the transport layer.
+    return wrapReadOnly(new WebSocketTransport(standaloneHostUrl));
   }
   // Future: replace the console send stub with a real browser transport.
   return createBrowserTransport();

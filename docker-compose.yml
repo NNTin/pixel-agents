@@ -14,8 +14,21 @@ services:
       - "3210"
     networks:
       - pixel-agents
+      - lair-network
     restart: unless-stopped
     command: npm run standalone:host -- --host 0.0.0.0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=lair-network"
+      - "traefik.http.routers.pa-health.rule=Host(`pa.lair.nntin.xyz`) && Path(`/api/health`)"
+      - "traefik.http.routers.pa-health.entrypoints=websecure"
+      - "traefik.http.routers.pa-health.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pa-health.service=pa-standalone"
+      - "traefik.http.routers.pa-ws.rule=Host(`pa.lair.nntin.xyz`) && Path(`/ws`)"
+      - "traefik.http.routers.pa-ws.entrypoints=websecure"
+      - "traefik.http.routers.pa-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pa-ws.service=pa-standalone"
+      - "traefik.http.services.pa-standalone.loadbalancer.server.port=3210"
     logging:
       driver: "loki"
       options:
@@ -38,8 +51,7 @@ services:
     ports:
       - "127.0.0.1:5173:5173"
     environment:
-      # need to investigate if this works, formerely ws://localhost:3210
-      VITE_PIXEL_AGENTS_HOST_URL: https://pp.lair.nntin.xyz
+      VITE_PIXEL_AGENTS_HOST_URL: https://pa.lair.nntin.xyz
     command: npm run dev -w webview-ui -- --host 0.0.0.0
     depends_on:
       - standalone
@@ -58,3 +70,6 @@ services:
 networks:
   pixel-agents:
     external: true
+  lair-network:
+    external: true
+    name: lair-network

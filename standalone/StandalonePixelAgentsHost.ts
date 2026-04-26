@@ -41,7 +41,6 @@ import type { LayoutWatcher } from '../server/src/layoutPersistence.js';
 import {
   migrateAndLoadLayout,
   watchLayoutFile,
-  writeLayoutToFile,
 } from '../server/src/layoutPersistence.js';
 import { claudeProvider, copyHookScript } from '../server/src/providers/index.js';
 import { PixelAgentsServer } from '../server/src/server.js';
@@ -50,6 +49,7 @@ import { setHookProvider } from '../server/src/transcriptParser.js';
 import type { AgentState } from '../server/src/types.js';
 import { FileStateAdapter } from './fileStateAdapter.js';
 import { NullTerminalAdapter } from './nullTerminalAdapter.js';
+import type { ClientRole } from './webSocketServer.js';
 import { StandaloneWebSocketServer } from './webSocketServer.js';
 
 type LoadedFloorTiles = Awaited<ReturnType<typeof loadFloorTiles>>;
@@ -201,8 +201,8 @@ export class StandalonePixelAgentsHost {
     this.browserServer = http.createServer((request, response) => {
       this.handleBrowserRequest(request, response);
     });
-    this.wsServer = new StandaloneWebSocketServer(this.browserServer, (clientId, message) => {
-      void this.handleClientMessage(clientId, message);
+    this.wsServer = new StandaloneWebSocketServer(this.browserServer, (clientId, role, message) => {
+      void this.handleClientMessage(clientId, role, message);
     });
   }
 
@@ -444,61 +444,17 @@ export class StandalonePixelAgentsHost {
     response.end();
   }
 
-  private async handleClientMessage(clientId: number, message: ClientMessage): Promise<void> {
+  private async handleClientMessage(clientId: number, role: ClientRole, message: ClientMessage): Promise<void> {
+    if (role === 'producer') {
+      // Trusted producer (Node-RED) — relay the payload as a ServerMessage to all viewers.
+      this.wsServer.broadcast(message as unknown as ServerMessage);
+      return;
+    }
+
+    // Viewer path: only webviewReady and requestDiagnostics are handled; all mutating messages are dropped.
     switch (message.type) {
       case 'webviewReady':
         this.sendBootstrap(clientId);
-        return;
-      case 'saveAgentSeats':
-        this.adapter.saveSeats(
-          Object.fromEntries(
-            Object.entries(message.seats).map(([agentId, seat]) => [
-              agentId,
-              {
-                palette: seat.palette,
-                hueShift: seat.hueShift,
-                seatId: seat.seatId ?? undefined,
-              },
-            ]),
-          ),
-        );
-        return;
-      case 'saveLayout':
-        this.layoutWatcher?.markOwnWrite();
-        writeLayoutToFile(message.layout as unknown as Record<string, unknown>);
-        this.wsServer.broadcast({ type: 'layoutLoaded', layout: message.layout as OfficeLayout });
-        return;
-      case 'setSoundEnabled':
-        this.adapter.setSetting(GLOBAL_KEY_SOUND_ENABLED, message.enabled);
-        return;
-      case 'setLastSeenVersion':
-        this.adapter.setSetting(GLOBAL_KEY_LAST_SEEN_VERSION, message.version);
-        return;
-      case 'setAlwaysShowLabels':
-        this.adapter.setSetting(GLOBAL_KEY_ALWAYS_SHOW_LABELS, message.enabled);
-        return;
-      case 'setWatchAllSessions':
-        this.adapter.setSetting(GLOBAL_KEY_WATCH_ALL_SESSIONS, message.enabled);
-        this.watchAllSessions.current = message.enabled;
-        return;
-      case 'setHooksEnabled':
-        this.adapter.setSetting(GLOBAL_KEY_HOOKS_ENABLED, message.enabled);
-        this.hooksEnabled.current = message.enabled;
-        if (message.enabled) {
-          const hookConfig = this.pixelAgentsServer?.getConfig();
-          if (hookConfig) {
-            await claudeProvider.installHooks(
-              `http://127.0.0.1:${hookConfig.port}`,
-              hookConfig.token,
-            );
-            copyHookScript(this.options.repoRoot);
-          }
-        } else {
-          await claudeProvider.uninstallHooks();
-        }
-        return;
-      case 'setHooksInfoShown':
-        this.adapter.setSetting(GLOBAL_KEY_HOOKS_INFO_SHOWN, true);
         return;
       case 'requestDiagnostics':
         this.wsServer.send(clientId, {
@@ -531,27 +487,8 @@ export class StandalonePixelAgentsHost {
           }),
         });
         return;
-      case 'closeAgent': {
-        const agent = this.store.get(message.id);
-        if (agent?.jsonlFile) {
-          this.dismissalTracker.dismiss(agent.jsonlFile);
-        }
-        this.removeTrackedAgent(message.id);
-        return;
-      }
-      case 'focusAgent':
-      case 'launchAgent':
-      case 'openSessionsFolder':
-      case 'exportLayout':
-      case 'importLayout':
-      case 'addExternalAssetDirectory':
-      case 'removeExternalAssetDirectory':
-        console.log(`[Pixel Agents] Standalone host ignoring unsupported message: ${message.type}`);
-        return;
       default:
-        // Relay: external clients (e.g. Node-RED) can push ServerMessage events by sending
-        // them as-is. Broadcast to all connected clients so the webview sees them.
-        this.wsServer.broadcast(message as unknown as ServerMessage);
+        console.log(`[Pixel Agents] Viewer dropped read-only-restricted message: ${message.type}`);
     }
   }
 
