@@ -35,6 +35,7 @@ interface ToolOverlayProps {
   panRef: React.RefObject<{ x: number; y: number }>;
   onCloseAgent: (id: number) => void;
   alwaysShowOverlay: boolean;
+  allowCloseAgent?: boolean;
 }
 
 /** Derive a short human-readable activity string from tools/status */
@@ -82,6 +83,7 @@ export function ToolOverlay({
   panRef,
   onCloseAgent,
   alwaysShowOverlay,
+  allowCloseAgent = true,
 }: ToolOverlayProps) {
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -218,7 +220,7 @@ export function ToolOverlay({
                   </span>
                 )}
               </div>
-              {isSelected && !isSub && (
+              {isSelected && !isSub && allowCloseAgent && (
                 <Button
                   variant="ghost"
                   size="icon"

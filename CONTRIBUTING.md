@@ -102,14 +102,14 @@ Available options:
 **Terminal 2** — start the webview dev server pointed at the host:
 
 ```bash
-VITE_PIXEL_AGENTS_HOST_URL=ws://localhost:3210 npm run dev -w webview-ui
+VITE_PIXEL_AGENTS_HOST_URL=http://127.0.0.1:3210 npm run dev -w webview-ui
 ```
 
 Then open `http://localhost:5173` in your browser.
 
-Alternatively, skip the env var and append `?host=ws://localhost:3210` to the URL directly.
+Alternatively, skip the env var and append `?host=http://127.0.0.1:3210` to the URL directly.
 
-> **Note:** Spawning new agents (`+ Agent`) is not supported in standalone mode — only external sessions detected via hooks or JSONL scanning are shown.
+> **Note:** The standalone browser runtime is a read-only viewer. Spawning agents, editing layouts, and changing backend settings are not supported there.
 
 ### Running with Docker
 
@@ -135,7 +135,7 @@ This integrated setup keeps the standalone host private on the `pixel-agents` Do
 docker compose --profile debug up webview
 ```
 
-The debug webview binds to `http://127.0.0.1:5173` and connects to `https://pp.lair.nntin.xyz`.
+The debug webview binds to `http://127.0.0.1:5173` and connects to `https://pa.lair.nntin.xyz`.
 
 The `standalone` service mounts `~/.claude` and `~/.pixel-agents` from your host so it can install hooks and read Claude session files exactly as the native setup does.
 

@@ -96,6 +96,16 @@ Pixel Agents watches Claude Code's JSONL transcript files to track what each age
 
 The webview runs a lightweight game loop with canvas rendering, BFS pathfinding, and a character state machine (idle → walk → type/read). Everything is pixel-perfect at integer zoom levels.
 
+### Hosted standalone viewer
+
+In the integrated `lair` deployment, the public standalone backend is exposed at
+`https://pa.lair.nntin.xyz`.
+
+- Browser viewers connect to `pa.lair.nntin.xyz` without authentication.
+- That browser runtime is read-only: it bootstraps and listens for live updates, but it does not control agents or persist layout/settings changes.
+- Trusted producer traffic stays private on the Docker `pixel-agents` network.
+- The protected Node-RED editor and control plane stay at `https://pp.lair.nntin.xyz`.
+
 ## Tech Stack
 
 - **Extension**: TypeScript, VS Code Webview API, esbuild

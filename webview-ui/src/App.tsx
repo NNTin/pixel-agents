@@ -21,7 +21,7 @@ import { EditorToolbar } from './office/editor/EditorToolbar.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { isRotatable } from './office/layout/furnitureCatalog.js';
 import { EditTool } from './office/types.js';
-import { isMockBrowserRuntime } from './runtime.js';
+import { isMockBrowserRuntime, isStandaloneBrowserRuntime } from './runtime.js';
 import { transport } from './transport/index.js';
 
 // Game state lives outside React — updated imperatively by message handlers
@@ -36,6 +36,8 @@ function getOfficeState(): OfficeState {
 }
 
 function App() {
+  const isReadOnlyViewer = isStandaloneBrowserRuntime;
+
   // Browser runtime (dev or static dist): dispatch mock messages after the
   // useExtensionMessages listener has been registered.
   useEffect(() => {
@@ -104,14 +106,22 @@ function App() {
   const handleToggleAlwaysShowOverlay = useCallback(() => {
     setAlwaysShowOverlay((prev) => {
       const newVal = !prev;
-      transport.send({ type: 'setAlwaysShowLabels', enabled: newVal });
+      if (!isReadOnlyViewer) {
+        transport.send({ type: 'setAlwaysShowLabels', enabled: newVal });
+      }
       return newVal;
     });
-  }, []);
+  }, [isReadOnlyViewer]);
 
-  const handleSelectAgent = useCallback((id: number) => {
-    transport.send({ type: 'focusAgent', id });
-  }, []);
+  const handleSelectAgent = useCallback(
+    (id: number) => {
+      if (isReadOnlyViewer) {
+        return;
+      }
+      transport.send({ type: 'focusAgent', id });
+    },
+    [isReadOnlyViewer],
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -128,17 +138,29 @@ function App() {
     editor.handleToggleEditMode,
   );
 
-  const handleCloseAgent = useCallback((id: number) => {
-    transport.send({ type: 'closeAgent', id });
-  }, []);
+  const handleCloseAgent = useCallback(
+    (id: number) => {
+      if (isReadOnlyViewer) {
+        return;
+      }
+      transport.send({ type: 'closeAgent', id });
+    },
+    [isReadOnlyViewer],
+  );
 
-  const handleClick = useCallback((agentId: number) => {
-    // If clicked agent is a sub-agent, focus the parent's terminal instead
-    const os = getOfficeState();
-    const meta = os.subagentMeta.get(agentId);
-    const focusId = meta ? meta.parentAgentId : agentId;
-    transport.send({ type: 'focusAgent', id: focusId });
-  }, []);
+  const handleClick = useCallback(
+    (agentId: number) => {
+      if (isReadOnlyViewer) {
+        return;
+      }
+      // If clicked agent is a sub-agent, focus the parent's terminal instead
+      const os = getOfficeState();
+      const meta = os.subagentMeta.get(agentId);
+      const focusId = meta ? meta.parentAgentId : agentId;
+      transport.send({ type: 'focusAgent', id: focusId });
+    },
+    [isReadOnlyViewer],
+  );
 
   const officeState = getOfficeState();
 
@@ -248,6 +270,7 @@ function App() {
             panRef={editor.panRef}
             onCloseAgent={handleCloseAgent}
             alwaysShowOverlay={alwaysShowOverlay}
+            allowCloseAgent={!isReadOnlyViewer}
           />
         </>
       ) : (
@@ -262,7 +285,7 @@ function App() {
       )}
 
       {/* Hooks first-run tooltip */}
-      {!hooksInfoShown && !hooksTooltipDismissed && (
+      {!isReadOnlyViewer && !hooksInfoShown && !hooksTooltipDismissed && (
         <Tooltip
           title="Instant Detection Active"
           position="top-right"
@@ -326,6 +349,7 @@ function App() {
         isSettingsOpen={isSettingsOpen}
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
         workspaceFolders={workspaceFolders}
+        readOnlyViewer={isReadOnlyViewer}
       />
 
       <VersionIndicator
@@ -361,6 +385,7 @@ function App() {
           setHooksEnabled(newVal);
           transport.send({ type: 'setHooksEnabled', enabled: newVal });
         }}
+        readOnlyViewer={isReadOnlyViewer}
       />
 
       {showMigrationNotice && (

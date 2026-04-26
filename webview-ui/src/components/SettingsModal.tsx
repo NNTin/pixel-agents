@@ -19,6 +19,7 @@ interface SettingsModalProps {
   onToggleWatchAllSessions: () => void;
   hooksEnabled: boolean;
   onToggleHooksEnabled: () => void;
+  readOnlyViewer?: boolean;
 }
 
 export function SettingsModal({
@@ -33,8 +34,34 @@ export function SettingsModal({
   onToggleWatchAllSessions,
   hooksEnabled,
   onToggleHooksEnabled,
+  readOnlyViewer = false,
 }: SettingsModalProps) {
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
+
+  if (readOnlyViewer) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Settings">
+        <div className="px-10 py-6 text-sm text-text-muted">
+          This browser viewer is read-only. Agent control, layout editing, diagnostics, and backend
+          settings are only available from trusted or local development environments.
+        </div>
+        <Checkbox
+          label="Sound Notifications"
+          checked={soundLocal}
+          onChange={() => {
+            const newVal = !isSoundEnabled();
+            setSoundEnabled(newVal);
+            setSoundLocal(newVal);
+          }}
+        />
+        <Checkbox
+          label="Always Show Labels"
+          checked={alwaysShowOverlay}
+          onChange={onToggleAlwaysShowOverlay}
+        />
+      </Modal>
+    );
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings">

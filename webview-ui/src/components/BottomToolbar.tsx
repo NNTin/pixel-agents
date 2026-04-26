@@ -12,6 +12,7 @@ interface BottomToolbarProps {
   isSettingsOpen: boolean;
   onToggleSettings: () => void;
   workspaceFolders: WorkspaceFolder[];
+  readOnlyViewer?: boolean;
 }
 
 export function BottomToolbar({
@@ -21,6 +22,7 @@ export function BottomToolbar({
   isSettingsOpen,
   onToggleSettings,
   workspaceFolders,
+  readOnlyViewer = false,
 }: BottomToolbarProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [isBypassMenuOpen, setIsBypassMenuOpen] = useState(false);
@@ -82,54 +84,69 @@ export function BottomToolbar({
 
   return (
     <div className="absolute bottom-10 left-10 z-20 flex items-center gap-4 pixel-panel p-4">
-      <div
-        ref={folderPickerRef}
-        className="relative"
-        onMouseEnter={handleAgentHover}
-        onMouseLeave={handleAgentLeave}
-      >
-        <Button
-          variant="accent"
-          onClick={handleAgentClick}
-          className={
-            isFolderPickerOpen || isBypassMenuOpen
-              ? 'bg-accent-bright'
-              : 'bg-accent hover:bg-accent-bright'
-          }
-        >
-          + Agent
-        </Button>
-        <Dropdown isOpen={isBypassMenuOpen}>
-          <DropdownItem onClick={() => handleBypassSelect(true)}>
-            Skip permissions mode <span className="text-2xs text-warning">⚠</span>
-          </DropdownItem>
-        </Dropdown>
-        <Dropdown isOpen={isFolderPickerOpen} className="min-w-128">
-          {workspaceFolders.map((folder) => (
-            <DropdownItem
-              key={folder.path}
-              onClick={() => handleFolderSelect(folder)}
-              className="text-base"
+      {readOnlyViewer ? (
+        <>
+          <span className="py-2 px-12 text-lg text-text-muted">Read-only viewer</span>
+          <Button
+            variant={isSettingsOpen ? 'active' : 'default'}
+            onClick={onToggleSettings}
+            title="Viewer settings"
+          >
+            Settings
+          </Button>
+        </>
+      ) : (
+        <>
+          <div
+            ref={folderPickerRef}
+            className="relative"
+            onMouseEnter={handleAgentHover}
+            onMouseLeave={handleAgentLeave}
+          >
+            <Button
+              variant="accent"
+              onClick={handleAgentClick}
+              className={
+                isFolderPickerOpen || isBypassMenuOpen
+                  ? 'bg-accent-bright'
+                  : 'bg-accent hover:bg-accent-bright'
+              }
             >
-              {folder.name}
-            </DropdownItem>
-          ))}
-        </Dropdown>
-      </div>
-      <Button
-        variant={isEditMode ? 'active' : 'default'}
-        onClick={onToggleEditMode}
-        title="Edit office layout"
-      >
-        Layout
-      </Button>
-      <Button
-        variant={isSettingsOpen ? 'active' : 'default'}
-        onClick={onToggleSettings}
-        title="Settings"
-      >
-        Settings
-      </Button>
+              + Agent
+            </Button>
+            <Dropdown isOpen={isBypassMenuOpen}>
+              <DropdownItem onClick={() => handleBypassSelect(true)}>
+                Skip permissions mode <span className="text-2xs text-warning">⚠</span>
+              </DropdownItem>
+            </Dropdown>
+            <Dropdown isOpen={isFolderPickerOpen} className="min-w-128">
+              {workspaceFolders.map((folder) => (
+                <DropdownItem
+                  key={folder.path}
+                  onClick={() => handleFolderSelect(folder)}
+                  className="text-base"
+                >
+                  {folder.name}
+                </DropdownItem>
+              ))}
+            </Dropdown>
+          </div>
+          <Button
+            variant={isEditMode ? 'active' : 'default'}
+            onClick={onToggleEditMode}
+            title="Edit office layout"
+          >
+            Layout
+          </Button>
+          <Button
+            variant={isSettingsOpen ? 'active' : 'default'}
+            onClick={onToggleSettings}
+            title="Settings"
+          >
+            Settings
+          </Button>
+        </>
+      )}
     </div>
   );
 }

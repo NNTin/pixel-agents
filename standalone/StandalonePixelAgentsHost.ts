@@ -38,10 +38,7 @@ import {
 import type { HookEvent } from '../server/src/hookEventHandler.js';
 import { HookEventHandler } from '../server/src/hookEventHandler.js';
 import type { LayoutWatcher } from '../server/src/layoutPersistence.js';
-import {
-  migrateAndLoadLayout,
-  watchLayoutFile,
-} from '../server/src/layoutPersistence.js';
+import { migrateAndLoadLayout, watchLayoutFile } from '../server/src/layoutPersistence.js';
 import { claudeProvider, copyHookScript } from '../server/src/providers/index.js';
 import { PixelAgentsServer } from '../server/src/server.js';
 import { SessionRouter } from '../server/src/sessionRouter.js';
@@ -444,48 +441,21 @@ export class StandalonePixelAgentsHost {
     response.end();
   }
 
-  private async handleClientMessage(clientId: number, role: ClientRole, message: ClientMessage): Promise<void> {
+  private async handleClientMessage(
+    clientId: number,
+    role: ClientRole,
+    message: ClientMessage,
+  ): Promise<void> {
     if (role === 'producer') {
       // Trusted producer (Node-RED) — relay the payload as a ServerMessage to all viewers.
       this.wsServer.broadcast(message as unknown as ServerMessage);
       return;
     }
 
-    // Viewer path: only webviewReady and requestDiagnostics are handled; all mutating messages are dropped.
+    // Viewer path: only webviewReady is handled; all other messages are dropped.
     switch (message.type) {
       case 'webviewReady':
         this.sendBootstrap(clientId);
-        return;
-      case 'requestDiagnostics':
-        this.wsServer.send(clientId, {
-          type: 'agentDiagnostics',
-          agents: [...this.store.values()].map((agent) => {
-            let jsonlExists = false;
-            let fileSize = 0;
-
-            if (agent.jsonlFile) {
-              try {
-                const stat = fs.statSync(agent.jsonlFile);
-                jsonlExists = true;
-                fileSize = stat.size;
-              } catch {
-                jsonlExists = false;
-              }
-            }
-
-            return {
-              id: agent.id,
-              projectDir: agent.projectDir,
-              projectDirExists: fs.existsSync(agent.projectDir),
-              jsonlFile: agent.jsonlFile,
-              jsonlExists,
-              fileSize,
-              fileOffset: agent.fileOffset,
-              lastDataAt: agent.lastDataAt,
-              linesProcessed: agent.linesProcessed,
-            };
-          }),
-        });
         return;
       default:
         console.log(`[Pixel Agents] Viewer dropped read-only-restricted message: ${message.type}`);

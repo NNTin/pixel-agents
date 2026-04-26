@@ -11,10 +11,7 @@ type MessageTargetLike = {
 };
 
 // Messages a read-only browser viewer is allowed to send.
-const VIEWER_ALLOWED_MESSAGES = new Set<ClientMessage['type']>([
-  'webviewReady',
-  'requestDiagnostics',
-]);
+const VIEWER_ALLOWED_MESSAGES = new Set<ClientMessage['type']>(['webviewReady']);
 
 function wrapReadOnly(inner: MessageTransport): MessageTransport {
   return {

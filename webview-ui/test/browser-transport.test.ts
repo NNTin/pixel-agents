@@ -102,6 +102,8 @@ describe('browser transport', () => {
 
     transport.send({ type: 'webviewReady' });
     expect(socket.send).not.toHaveBeenCalled();
+    transport.send({ type: 'requestDiagnostics' });
+    expect(socket.send).not.toHaveBeenCalled();
 
     const handler = vi.fn();
     const unsubscribe = transport.onMessage(handler);
@@ -109,6 +111,7 @@ describe('browser transport', () => {
     socket.readyState = FakeWebSocket.OPEN;
     socket.onopen?.();
     expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'webviewReady' }));
+    expect(socket.send).toHaveBeenCalledTimes(1);
 
     socket.onmessage?.({ data: JSON.stringify({ type: 'layoutLoaded', layout: null }) });
     expect(handler).toHaveBeenCalledWith({ type: 'layoutLoaded', layout: null });
