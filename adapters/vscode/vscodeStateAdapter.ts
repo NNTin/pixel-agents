@@ -1,7 +1,7 @@
 import type * as vscode from 'vscode';
 
 import type { StateAdapter } from '../../core/src/adapter.js';
-import type { PersistedAgent } from '../../core/src/schemas.js';
+import type { PersistedAgent, PersistedOverlayState } from '../../core/src/schemas.js';
 import {
   WORKSPACE_KEY_AGENT_SEATS,
   WORKSPACE_KEY_AGENTS,
@@ -34,6 +34,14 @@ export class VscodeStateAdapter implements StateAdapter {
 
   saveSeats(seats: Record<string, { palette?: number; hueShift?: number; seatId?: string }>): void {
     this.context.workspaceState.update(WORKSPACE_KEY_AGENT_SEATS, seats);
+  }
+
+  loadOverlayState(): PersistedOverlayState {
+    return { agents: [] };
+  }
+
+  saveOverlayState(_state: PersistedOverlayState): void {
+    // VS Code mode does not use the standalone producer replay cache.
   }
 
   // ── User-level settings (shared across workspaces) ─────────────────

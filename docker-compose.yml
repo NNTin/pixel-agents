@@ -29,16 +29,6 @@ services:
       - "traefik.http.routers.pa-ws.tls.certresolver=letsencrypt"
       - "traefik.http.routers.pa-ws.service=pa-standalone"
       - "traefik.http.services.pa-standalone.loadbalancer.server.port=3210"
-    logging:
-      driver: "loki"
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        loki-retries: "3"
-        loki-batch-size: "102400"
-        loki-external-labels: "service=pixel-agents-standalone,component=backend,environment=production"
-        max-size: "10m"
-        max-file: "3"
-        mode: "non-blocking"
 
   webview:
     profiles: ["debug"]
@@ -56,16 +46,6 @@ services:
     depends_on:
       - standalone
     restart: unless-stopped
-    logging:
-      driver: "loki"
-      options:
-        loki-url: "http://localhost:3100/loki/api/v1/push"
-        loki-retries: "3"
-        loki-batch-size: "102400"
-        loki-external-labels: "service=pixel-agents-webview,component=debug-ui,environment=production"
-        max-size: "10m"
-        max-file: "3"
-        mode: "non-blocking"
 
 networks:
   pixel-agents:

@@ -12,7 +12,14 @@ import { GLOBAL_KEY_SOUND_ENABLED } from '../adapters/vscode/constants.js';
 import { GLOBAL_KEY_WATCH_ALL_SESSIONS } from '../adapters/vscode/constants.js';
 import type { StateAdapter } from '../core/src/adapter.js';
 import type { ClientMessage, ServerMessage } from '../core/src/messages.js';
-import type { OfficeLayout } from '../core/src/schemas.js';
+import type {
+  OfficeLayout,
+  PersistedOverlayAgent,
+  PersistedOverlayState,
+  PersistedOverlaySubagentState,
+  PersistedOverlaySubagentToolState,
+  PersistedOverlayToolState,
+} from '../core/src/schemas.js';
 import { AgentStateStore } from '../server/src/agentStateStore.js';
 import type { LoadedAssets, LoadedCharacterSprites } from '../server/src/assetLoader.js';
 import {
@@ -80,6 +87,210 @@ function toSpritesObject(assets: LoadedAssets): Record<string, string[][]> {
   return sprites;
 }
 
+interface OverlayToolState {
+  toolId: string;
+  status: string;
+  toolName?: string;
+  done: boolean;
+  permissionActive: boolean;
+  runInBackground: boolean;
+}
+
+interface OverlaySubagentToolState {
+  toolId: string;
+  status: string;
+  done: boolean;
+}
+
+interface OverlaySubagentState {
+  parentToolId: string;
+  permissionActive: boolean;
+  tools: Record<string, OverlaySubagentToolState>;
+}
+
+interface OverlayAgentState {
+  id: number;
+  folderName?: string;
+  isExternal: boolean;
+  isTeammate: boolean;
+  teammateName?: string;
+  parentAgentId?: number;
+  teamName?: string;
+  hooksOnly: boolean;
+  selected: boolean;
+  status: 'active' | 'waiting';
+  permissionActive: boolean;
+  tools: Record<string, OverlayToolState>;
+  subagents: Record<string, OverlaySubagentState>;
+  agentName?: string;
+  isTeamLead?: boolean;
+  leadAgentId?: number;
+  teamUsesTmux?: boolean;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+function createOverlayAgentState(id: number): OverlayAgentState {
+  return {
+    id,
+    isExternal: false,
+    isTeammate: false,
+    hooksOnly: false,
+    selected: false,
+    status: 'active',
+    permissionActive: false,
+    tools: {},
+    subagents: {},
+    inputTokens: 0,
+    outputTokens: 0,
+  };
+}
+
+function toOverlaySubagentState(
+  persisted: PersistedOverlaySubagentState,
+): OverlaySubagentState | null {
+  if (!persisted.parentToolId) {
+    return null;
+  }
+
+  const tools: Record<string, OverlaySubagentToolState> = {};
+  for (const tool of persisted.tools) {
+    if (!tool.toolId || !tool.status) {
+      continue;
+    }
+    tools[tool.toolId] = {
+      toolId: tool.toolId,
+      status: tool.status,
+      done: !!tool.done,
+    };
+  }
+
+  return {
+    parentToolId: persisted.parentToolId,
+    permissionActive: !!persisted.permissionActive,
+    tools,
+  };
+}
+
+function toOverlayAgentState(persisted: PersistedOverlayAgent): OverlayAgentState {
+  const tools: Record<string, OverlayToolState> = {};
+  for (const tool of persisted.tools) {
+    if (!tool.toolId || !tool.status) {
+      continue;
+    }
+    tools[tool.toolId] = {
+      toolId: tool.toolId,
+      status: tool.status,
+      toolName: tool.toolName,
+      done: !!tool.done,
+      permissionActive: !!tool.permissionActive,
+      runInBackground: !!tool.runInBackground,
+    };
+  }
+
+  const subagents: Record<string, OverlaySubagentState> = {};
+  for (const subagent of persisted.subagents) {
+    const restored = toOverlaySubagentState(subagent);
+    if (!restored) {
+      continue;
+    }
+    subagents[restored.parentToolId] = restored;
+  }
+
+  return {
+    id: persisted.id,
+    folderName: persisted.folderName,
+    isExternal: !!persisted.isExternal,
+    isTeammate: !!persisted.isTeammate,
+    teammateName: persisted.teammateName,
+    parentAgentId: persisted.parentAgentId,
+    teamName: persisted.teamName,
+    hooksOnly: !!persisted.hooksOnly,
+    selected: !!persisted.selected,
+    status: persisted.status === 'waiting' ? 'waiting' : 'active',
+    permissionActive: !!persisted.permissionActive,
+    tools,
+    subagents,
+    agentName: persisted.agentName,
+    isTeamLead: persisted.isTeamLead,
+    leadAgentId: persisted.leadAgentId,
+    teamUsesTmux: persisted.teamUsesTmux,
+    inputTokens: persisted.inputTokens ?? 0,
+    outputTokens: persisted.outputTokens ?? 0,
+  };
+}
+
+function serializeOverlaySubagentState(state: OverlaySubagentState): PersistedOverlaySubagentState {
+  const tools: PersistedOverlaySubagentToolState[] = Object.values(state.tools)
+    .sort((left, right) => left.toolId.localeCompare(right.toolId))
+    .map((tool) => ({
+      toolId: tool.toolId,
+      status: tool.status,
+      done: tool.done || undefined,
+    }));
+
+  return {
+    parentToolId: state.parentToolId,
+    permissionActive: state.permissionActive || undefined,
+    tools,
+  };
+}
+
+function serializeOverlayAgentState(state: OverlayAgentState): PersistedOverlayAgent {
+  const tools: PersistedOverlayToolState[] = Object.values(state.tools)
+    .sort((left, right) => left.toolId.localeCompare(right.toolId))
+    .map((tool) => ({
+      toolId: tool.toolId,
+      status: tool.status,
+      toolName: tool.toolName,
+      done: tool.done || undefined,
+      permissionActive: tool.permissionActive || undefined,
+      runInBackground: tool.runInBackground || undefined,
+    }));
+
+  const subagents: PersistedOverlaySubagentState[] = Object.values(state.subagents)
+    .sort((left, right) => left.parentToolId.localeCompare(right.parentToolId))
+    .map(serializeOverlaySubagentState);
+
+  return {
+    id: state.id,
+    folderName: state.folderName,
+    isExternal: state.isExternal || undefined,
+    isTeammate: state.isTeammate || undefined,
+    teammateName: state.teammateName,
+    parentAgentId: state.parentAgentId,
+    teamName: state.teamName,
+    hooksOnly: state.hooksOnly || undefined,
+    selected: state.selected || undefined,
+    status: state.status === 'waiting' ? 'waiting' : undefined,
+    permissionActive: state.permissionActive || undefined,
+    tools,
+    subagents,
+    agentName: state.agentName,
+    isTeamLead: state.isTeamLead,
+    leadAgentId: state.leadAgentId,
+    teamUsesTmux: state.teamUsesTmux,
+    inputTokens: state.inputTokens > 0 ? state.inputTokens : undefined,
+    outputTokens: state.outputTokens > 0 ? state.outputTokens : undefined,
+  };
+}
+
+function toCreatedMessage(
+  agent: OverlayAgentState,
+): Extract<ServerMessage, { type: 'agentCreated' }> {
+  return {
+    type: 'agentCreated',
+    id: agent.id,
+    folderName: agent.folderName,
+    isExternal: agent.isExternal || undefined,
+    isTeammate: agent.isTeammate || undefined,
+    teammateName: agent.teammateName,
+    parentAgentId: agent.parentAgentId,
+    teamName: agent.teamName,
+    hooksOnly: agent.hooksOnly || undefined,
+  };
+}
+
 function removeStoredAgent(
   agentId: number,
   store: AgentStateStore,
@@ -137,6 +348,7 @@ function createMessageSink(
 export class StandalonePixelAgentsHost {
   private readonly adapter: StateAdapter;
   private readonly store = new AgentStateStore();
+  private readonly overlayAgents = new Map<number, OverlayAgentState>();
   private readonly dismissalTracker = new DismissalTracker();
   private readonly waitingTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private readonly permissionTimers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -198,14 +410,23 @@ export class StandalonePixelAgentsHost {
     this.browserServer = http.createServer((request, response) => {
       this.handleBrowserRequest(request, response);
     });
-    this.wsServer = new StandaloneWebSocketServer(this.browserServer, (clientId, role, message) => {
-      void this.handleClientMessage(clientId, role, message);
-    });
+    this.wsServer = new StandaloneWebSocketServer(
+      this.browserServer,
+      (clientId, role, message) => {
+        void this.handleClientMessage(clientId, role, message);
+      },
+      (clientId, role) => {
+        if (role === 'producer') {
+          this.requestProducerBootstrap(clientId);
+        }
+      },
+    );
   }
 
   async start(): Promise<void> {
     this.startedAt = Date.now();
     this.restorePersistedAgents();
+    this.restorePersistedOverlayState();
     await this.reloadAssets();
     await this.startHookServer();
     await new Promise<void>((resolve, reject) => {
@@ -414,6 +635,22 @@ export class StandalonePixelAgentsHost {
     }
   }
 
+  private restorePersistedOverlayState(): void {
+    const persisted = this.adapter.loadOverlayState();
+    for (const agent of persisted.agents) {
+      this.overlayAgents.set(agent.id, toOverlayAgentState(agent));
+    }
+  }
+
+  private persistOverlayState(): void {
+    const state: PersistedOverlayState = {
+      agents: [...this.overlayAgents.values()]
+        .sort((left, right) => left.id - right.id)
+        .map(serializeOverlayAgentState),
+    };
+    this.adapter.saveOverlayState(state);
+  }
+
   private handleBrowserRequest(request: http.IncomingMessage, response: http.ServerResponse): void {
     if (request.method === 'GET' && request.url === '/api/health') {
       const browserAddress = this.browserServer.address();
@@ -447,8 +684,7 @@ export class StandalonePixelAgentsHost {
     message: ClientMessage,
   ): Promise<void> {
     if (role === 'producer') {
-      // Trusted producer (Node-RED) — relay the payload as a ServerMessage to all viewers.
-      this.wsServer.broadcast(message as unknown as ServerMessage);
+      this.handleProducerMessage(message as unknown as ServerMessage);
       return;
     }
 
@@ -464,6 +700,7 @@ export class StandalonePixelAgentsHost {
 
   private sendBootstrap(clientId: number): void {
     const send = (message: ServerMessage) => this.wsServer.send(clientId, message);
+    const sink = createMessageSink(send);
 
     send({
       type: 'providerCapabilities',
@@ -503,6 +740,9 @@ export class StandalonePixelAgentsHost {
       });
     }
 
+    this.sendExistingAgents(sink);
+    this.sendOverlayExistingAgents(sink);
+
     const layout = migrateAndLoadLayout(this.adapter, this.defaultLayout);
     send({
       type: 'layoutLoaded',
@@ -510,9 +750,8 @@ export class StandalonePixelAgentsHost {
       wasReset: layout?.wasReset ?? false,
     });
 
-    const sink = createMessageSink(send);
-    this.sendExistingAgents(sink);
     this.sendCurrentAgentStatuses(sink);
+    this.sendCurrentOverlayState(sink);
   }
 
   private sendExistingAgents(webview: vscode.Webview): void {
@@ -582,6 +821,155 @@ export class StandalonePixelAgentsHost {
     }
   }
 
+  private sendOverlayExistingAgents(webview: vscode.Webview): void {
+    const agentIds: number[] = [];
+    const folderNames: Record<number, string> = {};
+    const externalAgents: Record<number, boolean> = {};
+
+    for (const [id, agent] of [...this.overlayAgents.entries()].sort(
+      (left, right) => left[0] - right[0],
+    )) {
+      if (agent.isTeammate && agent.parentAgentId !== undefined) {
+        continue;
+      }
+      agentIds.push(id);
+      if (agent.folderName) {
+        folderNames[id] = agent.folderName;
+      }
+      if (agent.isExternal) {
+        externalAgents[id] = true;
+      }
+    }
+
+    if (agentIds.length === 0) {
+      return;
+    }
+
+    webview.postMessage({
+      type: 'existingAgents',
+      agents: agentIds,
+      agentMeta: {},
+      folderNames,
+      externalAgents,
+    });
+  }
+
+  private sendCurrentOverlayState(webview: vscode.Webview): void {
+    const agents = [...this.overlayAgents.values()].sort((left, right) => left.id - right.id);
+
+    for (const agent of agents) {
+      if (agent.isTeammate && agent.parentAgentId !== undefined) {
+        webview.postMessage(toCreatedMessage(agent));
+      }
+    }
+
+    for (const agent of agents) {
+      const tools = Object.values(agent.tools).sort((left, right) =>
+        left.toolId.localeCompare(right.toolId),
+      );
+      for (const tool of tools) {
+        webview.postMessage({
+          type: 'agentToolStart',
+          id: agent.id,
+          toolId: tool.toolId,
+          status: tool.status,
+          toolName: tool.toolName,
+          permissionActive: tool.permissionActive || undefined,
+          runInBackground: tool.runInBackground || undefined,
+        });
+        if (tool.done) {
+          webview.postMessage({
+            type: 'agentToolDone',
+            id: agent.id,
+            toolId: tool.toolId,
+          });
+        }
+      }
+
+      if (agent.permissionActive) {
+        webview.postMessage({
+          type: 'agentToolPermission',
+          id: agent.id,
+        });
+      }
+
+      const subagents = Object.values(agent.subagents).sort((left, right) =>
+        left.parentToolId.localeCompare(right.parentToolId),
+      );
+      for (const subagent of subagents) {
+        const subagentTools = Object.values(subagent.tools).sort((left, right) =>
+          left.toolId.localeCompare(right.toolId),
+        );
+        for (const tool of subagentTools) {
+          webview.postMessage({
+            type: 'subagentToolStart',
+            id: agent.id,
+            parentToolId: subagent.parentToolId,
+            toolId: tool.toolId,
+            status: tool.status,
+          });
+          if (tool.done) {
+            webview.postMessage({
+              type: 'subagentToolDone',
+              id: agent.id,
+              parentToolId: subagent.parentToolId,
+              toolId: tool.toolId,
+            });
+          }
+        }
+        if (subagent.permissionActive) {
+          webview.postMessage({
+            type: 'subagentToolPermission',
+            id: agent.id,
+            parentToolId: subagent.parentToolId,
+          });
+        }
+      }
+
+      if (agent.status === 'waiting') {
+        webview.postMessage({
+          type: 'agentStatus',
+          id: agent.id,
+          status: 'waiting',
+        });
+      }
+
+      if (agent.selected) {
+        webview.postMessage({
+          type: 'agentSelected',
+          id: agent.id,
+        });
+      }
+
+      if (
+        agent.teamName ||
+        agent.agentName ||
+        agent.isTeamLead !== undefined ||
+        agent.leadAgentId !== undefined ||
+        agent.teamUsesTmux !== undefined
+      ) {
+        webview.postMessage({
+          type: 'agentTeamInfo',
+          id: agent.id,
+          teamName: agent.teamName,
+          agentName: agent.agentName,
+          isTeamLead: agent.isTeamLead,
+          leadAgentId: agent.leadAgentId,
+          teamUsesTmux: agent.teamUsesTmux,
+        });
+      }
+
+      if (agent.inputTokens > 0 || agent.outputTokens > 0) {
+        webview.postMessage({
+          type: 'agentTokenUsage',
+          id: agent.id,
+          inputTokens: agent.inputTokens,
+          outputTokens: agent.outputTokens,
+        });
+      }
+    }
+  }
+
   private startLayoutWatcher(): void {
     if (this.layoutWatcher) {
       return;
@@ -617,5 +1005,236 @@ export class StandalonePixelAgentsHost {
       this.permissionTimers,
       this.jsonlPollTimers,
     );
+  }
+
+  private requestProducerBootstrap(clientId: number): void {
+    this.wsServer.send(clientId, { type: 'producerBootstrapRequest' });
+  }
+
+  private ensureOverlayAgent(id: number): OverlayAgentState {
+    const existing = this.overlayAgents.get(id);
+    if (existing) {
+      return existing;
+    }
+
+    const created = createOverlayAgentState(id);
+    this.overlayAgents.set(id, created);
+    return created;
+  }
+
+  private getOverlaySubagentState(
+    agent: OverlayAgentState,
+    parentToolId: string,
+  ): OverlaySubagentState {
+    const existing = agent.subagents[parentToolId];
+    if (existing) {
+      return existing;
+    }
+
+    const created: OverlaySubagentState = {
+      parentToolId,
+      permissionActive: false,
+      tools: {},
+    };
+    agent.subagents[parentToolId] = created;
+    return created;
+  }
+
+  private handleProducerMessage(message: ServerMessage): void {
+    for (const outbound of this.applyProducerMessage(message)) {
+      this.wsServer.broadcast(outbound);
+    }
+  }
+
+  private applyProducerMessage(message: ServerMessage): ServerMessage[] {
+    switch (message.type) {
+      case 'agentCreated': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.folderName = message.folderName ?? agent.folderName;
+        agent.isExternal = !!message.isExternal;
+        agent.isTeammate = !!message.isTeammate;
+        agent.teammateName = message.teammateName ?? agent.teammateName;
+        agent.parentAgentId = message.parentAgentId ?? agent.parentAgentId;
+        agent.teamName = message.teamName ?? agent.teamName;
+        agent.hooksOnly = !!message.hooksOnly;
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentClosed': {
+        if (this.overlayAgents.delete(message.id)) {
+          this.persistOverlayState();
+        }
+        return [message];
+      }
+      case 'agentSelected': {
+        this.ensureOverlayAgent(message.id);
+        for (const candidate of this.overlayAgents.values()) {
+          candidate.selected = candidate.id === message.id;
+        }
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'existingAgents': {
+        return this.applyProducerExistingAgents(message);
+      }
+      case 'agentStatus': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.status = message.status;
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentToolStart': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.tools[message.toolId] = {
+          toolId: message.toolId,
+          status: message.status,
+          toolName: message.toolName,
+          done: false,
+          permissionActive: !!message.permissionActive,
+          runInBackground: !!message.runInBackground,
+        };
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentToolDone': {
+        const agent = this.ensureOverlayAgent(message.id);
+        const tool = agent.tools[message.toolId];
+        if (tool) {
+          tool.done = true;
+          this.persistOverlayState();
+        }
+        return [message];
+      }
+      case 'agentToolsClear': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.permissionActive = false;
+        agent.tools = {};
+        agent.subagents = {};
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentToolPermission': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.permissionActive = true;
+        for (const tool of Object.values(agent.tools)) {
+          if (!tool.done) {
+            tool.permissionActive = true;
+          }
+        }
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentToolPermissionClear': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.permissionActive = false;
+        for (const tool of Object.values(agent.tools)) {
+          tool.permissionActive = false;
+        }
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'subagentToolStart': {
+        const agent = this.ensureOverlayAgent(message.id);
+        const subagent = this.getOverlaySubagentState(agent, message.parentToolId);
+        subagent.tools[message.toolId] = {
+          toolId: message.toolId,
+          status: message.status,
+          done: false,
+        };
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'subagentToolDone': {
+        const agent = this.ensureOverlayAgent(message.id);
+        const tool = agent.subagents[message.parentToolId]?.tools[message.toolId];
+        if (tool) {
+          tool.done = true;
+          this.persistOverlayState();
+        }
+        return [message];
+      }
+      case 'subagentClear': {
+        const agent = this.ensureOverlayAgent(message.id);
+        if (agent.subagents[message.parentToolId]) {
+          delete agent.subagents[message.parentToolId];
+          this.persistOverlayState();
+        }
+        return [message];
+      }
+      case 'subagentToolPermission': {
+        const agent = this.ensureOverlayAgent(message.id);
+        const subagent = this.getOverlaySubagentState(agent, message.parentToolId);
+        subagent.permissionActive = true;
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentTeamInfo': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.teamName = message.teamName ?? agent.teamName;
+        agent.agentName = message.agentName ?? agent.agentName;
+        agent.isTeamLead = message.isTeamLead;
+        agent.leadAgentId = message.leadAgentId;
+        agent.teamUsesTmux = message.teamUsesTmux;
+        this.persistOverlayState();
+        return [message];
+      }
+      case 'agentTokenUsage': {
+        const agent = this.ensureOverlayAgent(message.id);
+        agent.inputTokens = message.inputTokens;
+        agent.outputTokens = message.outputTokens;
+        this.persistOverlayState();
+        return [message];
+      }
+      default:
+        return [];
+    }
+  }
+
+  private applyProducerExistingAgents(
+    message: Extract<ServerMessage, { type: 'existingAgents' }>,
+  ): ServerMessage[] {
+    const nextIds = new Set(message.agents);
+    const folderNames = message.folderNames ?? {};
+    const externalAgents = message.externalAgents ?? {};
+    const broadcasts: ServerMessage[] = [];
+    let changed = false;
+
+    for (const currentId of [...this.overlayAgents.keys()]) {
+      if (!nextIds.has(currentId)) {
+        this.overlayAgents.delete(currentId);
+        broadcasts.push({ type: 'agentClosed', id: currentId });
+        changed = true;
+      }
+    }
+
+    for (const id of message.agents) {
+      const alreadyHad = this.overlayAgents.has(id);
+      const agent = this.ensureOverlayAgent(id);
+      const nextFolderName = folderNames[id];
+      const nextIsExternal = !!externalAgents[id];
+
+      if (!alreadyHad) {
+        agent.folderName = nextFolderName ?? agent.folderName;
+        agent.isExternal = nextIsExternal;
+        broadcasts.push(toCreatedMessage(agent));
+        changed = true;
+        continue;
+      }
+
+      if (nextFolderName !== undefined && nextFolderName !== agent.folderName) {
+        agent.folderName = nextFolderName;
+        changed = true;
+      }
+      if (agent.isExternal !== nextIsExternal) {
+        agent.isExternal = nextIsExternal;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.persistOverlayState();
+    }
+
+    return broadcasts;
   }
 }

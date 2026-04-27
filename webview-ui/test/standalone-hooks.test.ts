@@ -19,6 +19,16 @@ interface ServerConfig {
   token: string;
 }
 
+interface ProducerHarness {
+  socket: WebSocket | null;
+  received: Array<Record<string, unknown>>;
+  bootstrapMessages: Array<Record<string, unknown>>;
+}
+
+type ProducerHarnessWindow = Window & {
+  __producerHarness?: ProducerHarness;
+};
+
 const webviewRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(webviewRoot, '..');
 
@@ -216,6 +226,112 @@ async function drainRecordedMessages(page: Page): Promise<ServerMessage[]> {
   });
 }
 
+function toWebSocketUrl(baseUrl: string, pathname: string): string {
+  const url = new URL(pathname, baseUrl);
+  if (url.protocol === 'http:') {
+    url.protocol = 'ws:';
+  } else if (url.protocol === 'https:') {
+    url.protocol = 'wss:';
+  }
+  return url.toString();
+}
+
+async function installProducerHarness(page: Page): Promise<void> {
+  await page.goto('about:blank');
+  await page.evaluate(() => {
+    const producerWindow = window as ProducerHarnessWindow;
+    producerWindow.__producerHarness = {
+      socket: null,
+      received: [],
+      bootstrapMessages: [],
+    };
+  });
+}
+
+async function setProducerBootstrapMessages(
+  page: Page,
+  messages: Array<Record<string, unknown>>,
+): Promise<void> {
+  await page.evaluate((nextMessages) => {
+    const producerWindow = window as ProducerHarnessWindow;
+    if (!producerWindow.__producerHarness) {
+      throw new Error('Producer harness is not installed');
+    }
+    producerWindow.__producerHarness.bootstrapMessages = nextMessages;
+  }, messages);
+}
+
+async function connectProducer(page: Page, hostUrl: string): Promise<void> {
+  const producerUrl = toWebSocketUrl(hostUrl, '/ws/producer');
+  await page.evaluate(async (url) => {
+    const producerWindow = window as ProducerHarnessWindow;
+    const harness = producerWindow.__producerHarness;
+    if (!harness) {
+      throw new Error('Producer harness is not installed');
+    }
+
+    if (harness.socket) {
+      harness.socket.close();
+      harness.socket = null;
+    }
+    harness.received = [];
+
+    await new Promise<void>((resolve, reject) => {
+      const socket = new WebSocket(url);
+      const timeout = window.setTimeout(() => {
+        reject(new Error(`Timed out connecting producer to ${url}`));
+      }, 10_000);
+
+      socket.addEventListener('open', () => {
+        window.clearTimeout(timeout);
+        resolve();
+      });
+      socket.addEventListener('error', () => {
+        window.clearTimeout(timeout);
+        reject(new Error(`Producer socket failed for ${url}`));
+      });
+      socket.addEventListener('message', (event) => {
+        if (typeof event.data !== 'string') {
+          return;
+        }
+        try {
+          const parsed = JSON.parse(event.data) as Record<string, unknown>;
+          harness.received.push(parsed);
+          if (parsed.type === 'producerBootstrapRequest') {
+            for (const message of harness.bootstrapMessages) {
+              socket.send(JSON.stringify(message));
+            }
+          }
+        } catch {
+          // Ignore non-JSON frames in the producer harness.
+        }
+      });
+      harness.socket = socket;
+    });
+  }, producerUrl);
+}
+
+async function disconnectProducer(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const producerWindow = window as ProducerHarnessWindow;
+    producerWindow.__producerHarness?.socket?.close();
+    if (producerWindow.__producerHarness) {
+      producerWindow.__producerHarness.socket = null;
+    }
+  });
+}
+
+async function sendProducerMessage(page: Page, message: Record<string, unknown>): Promise<void> {
+  await page.evaluate((nextMessage) => {
+    const producerWindow = window as ProducerHarnessWindow;
+    const socket = producerWindow.__producerHarness?.socket;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error('Producer socket is not open');
+    }
+    socket.send(JSON.stringify(nextMessage));
+  }, message);
+}
+
 async function enableAlwaysShowLabels(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: /Always Show Labels/ }).click();
@@ -356,6 +472,164 @@ test('standalone host propagates hook-driven lifecycle into the browser UI', asy
     await expect(agentOverlay).toHaveCount(0);
     const sessionEndMessages = await drainRecordedMessages(page);
     expect(sessionEndMessages.some((message) => message.type === 'agentClosed')).toBe(true);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+    if (devServer) {
+      await devServer.close();
+    }
+    hostProcess.kill('SIGTERM');
+    await delay(250);
+    fs.rmSync(vscodeShimRoot, { recursive: true, force: true });
+    fs.rmSync(tempHome, { recursive: true, force: true });
+    fs.rmSync(workspaceDir, { recursive: true, force: true });
+  }
+});
+
+test('standalone host replays producer-backed agents to a later viewer', async () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-agents-standalone-home-'));
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-agents-standalone-workspace-'));
+  const vscodeShimRoot = createVsCodeShimRoot();
+  const hostPort = await getFreePort();
+  const hostUrl = `http://127.0.0.1:${hostPort}`;
+  const hostProcess = spawnStandaloneHost({
+    homeDir: tempHome,
+    hostPort,
+    nodePathRoot: vscodeShimRoot,
+    workspaceDir,
+  });
+
+  let devServer: ViteDevServer | null = null;
+  let browser: Browser | null = null;
+
+  try {
+    await waitForHttpOk(`${hostUrl}/api/health`);
+
+    devServer = await startDevServer();
+    browser = await chromium.launch();
+    const producerPage = await browser.newPage();
+    await installProducerHarness(producerPage);
+    await setProducerBootstrapMessages(producerPage, []);
+    await connectProducer(producerPage, hostUrl);
+
+    await sendProducerMessage(producerPage, {
+      type: 'agentCreated',
+      id: 41,
+      folderName: 'overlay-workspace',
+    });
+    await sendProducerMessage(producerPage, {
+      type: 'agentToolStart',
+      id: 41,
+      toolId: 'overlay-tool-1',
+      status: 'Reading demo.ts',
+      toolName: 'Read',
+    });
+    await sendProducerMessage(producerPage, {
+      type: 'agentStatus',
+      id: 41,
+      status: 'waiting',
+    });
+
+    const page = await browser.newPage();
+    await installMessageRecorder(page);
+    await openLiveStandalonePage(page, serverUrl(devServer), hostUrl);
+    await enableAlwaysShowLabels(page);
+
+    await expect(page.locator('[data-testid="agent-overlay"]')).toHaveCount(1);
+    await expect(page.getByText('Reading demo.ts')).toBeVisible();
+    const replayedMessages = await drainRecordedMessages(page);
+    expect(
+      replayedMessages.some(
+        (message) =>
+          message.type === 'agentStatus' && 'status' in message && message.status === 'waiting',
+      ),
+    ).toBe(true);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+    if (devServer) {
+      await devServer.close();
+    }
+    hostProcess.kill('SIGTERM');
+    await delay(250);
+    fs.rmSync(vscodeShimRoot, { recursive: true, force: true });
+    fs.rmSync(tempHome, { recursive: true, force: true });
+    fs.rmSync(workspaceDir, { recursive: true, force: true });
+  }
+});
+
+test('standalone host restores persisted overlay state and reconciles it on producer reconnect', async () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-agents-standalone-home-'));
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-agents-standalone-workspace-'));
+  const vscodeShimRoot = createVsCodeShimRoot();
+  const hostPort = await getFreePort();
+  const hostUrl = `http://127.0.0.1:${hostPort}`;
+
+  let hostProcess = spawnStandaloneHost({
+    homeDir: tempHome,
+    hostPort,
+    nodePathRoot: vscodeShimRoot,
+    workspaceDir,
+  });
+  let devServer: ViteDevServer | null = null;
+  let browser: Browser | null = null;
+
+  try {
+    await waitForHttpOk(`${hostUrl}/api/health`);
+    devServer = await startDevServer();
+    browser = await chromium.launch();
+
+    const producerPage = await browser.newPage();
+    await installProducerHarness(producerPage);
+    await setProducerBootstrapMessages(producerPage, []);
+    await connectProducer(producerPage, hostUrl);
+    await sendProducerMessage(producerPage, {
+      type: 'agentCreated',
+      id: 77,
+      folderName: 'persisted-overlay',
+    });
+    await sendProducerMessage(producerPage, {
+      type: 'agentToolStart',
+      id: 77,
+      toolId: 'persisted-tool-1',
+      status: 'Searching code',
+      toolName: 'Grep',
+    });
+
+    await disconnectProducer(producerPage);
+    hostProcess.kill('SIGTERM');
+    await delay(500);
+
+    hostProcess = spawnStandaloneHost({
+      homeDir: tempHome,
+      hostPort,
+      nodePathRoot: vscodeShimRoot,
+      workspaceDir,
+    });
+    await waitForHttpOk(`${hostUrl}/api/health`);
+
+    const page = await browser.newPage();
+    await installMessageRecorder(page);
+    await openLiveStandalonePage(page, serverUrl(devServer), hostUrl);
+    await enableAlwaysShowLabels(page);
+
+    await expect(page.locator('[data-testid="agent-overlay"]')).toHaveCount(1);
+    await expect(page.getByText('Searching code')).toBeVisible();
+
+    await setProducerBootstrapMessages(producerPage, [
+      {
+        type: 'existingAgents',
+        agents: [],
+        agentMeta: {},
+        folderNames: {},
+        externalAgents: {},
+      },
+    ]);
+    await connectProducer(producerPage, hostUrl);
+
+    await expect(page.locator('[data-testid="agent-overlay"]')).toHaveCount(0);
   } finally {
     if (browser) {
       await browser.close();

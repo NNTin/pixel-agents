@@ -4,12 +4,13 @@ import * as os from 'os';
 import * as path from 'path';
 
 import type { StateAdapter } from '../core/src/adapter.js';
-import type { PersistedAgent } from '../core/src/schemas.js';
+import type { PersistedAgent, PersistedOverlayState } from '../core/src/schemas.js';
 
 interface WorkspaceStateFile {
   workspaceDir: string;
   agents: PersistedAgent[];
   seats: Record<string, { palette?: number; hueShift?: number; seatId?: string }>;
+  overlayState: PersistedOverlayState;
 }
 
 type SettingsStateFile = Record<string, unknown>;
@@ -17,6 +18,7 @@ type SettingsStateFile = Record<string, unknown>;
 const DEFAULT_WORKSPACE_STATE: Omit<WorkspaceStateFile, 'workspaceDir'> = {
   agents: [],
   seats: {},
+  overlayState: { agents: [] },
 };
 
 function readJsonFile<T>(filePath: string, fallback: T): T {
@@ -79,6 +81,16 @@ export class FileStateAdapter implements StateAdapter {
     this.writeWorkspaceState(state);
   }
 
+  loadOverlayState(): PersistedOverlayState {
+    return this.readWorkspaceState().overlayState;
+  }
+
+  saveOverlayState(overlayState: PersistedOverlayState): void {
+    const state = this.readWorkspaceState();
+    state.overlayState = overlayState;
+    this.writeWorkspaceState(state);
+  }
+
   getSetting<T>(key: string, defaultValue: T): T {
     const settings = readJsonFile<SettingsStateFile>(this.settingsPath, {});
     return key in settings ? (settings[key] as T) : defaultValue;
@@ -99,10 +111,27 @@ export class FileStateAdapter implements StateAdapter {
   }
 
   private readWorkspaceState(): WorkspaceStateFile {
-    return readJsonFile<WorkspaceStateFile>(this.workspaceStatePath, {
+    const state = readJsonFile<WorkspaceStateFile>(this.workspaceStatePath, {
       workspaceDir: this.workspaceDir,
       ...DEFAULT_WORKSPACE_STATE,
     });
+    if (!Array.isArray(state.agents)) {
+      state.agents = [];
+    }
+    if (!state.seats || typeof state.seats !== 'object' || Array.isArray(state.seats)) {
+      state.seats = {};
+    }
+    if (
+      !state.overlayState ||
+      typeof state.overlayState !== 'object' ||
+      !Array.isArray(state.overlayState.agents)
+    ) {
+      state.overlayState = { agents: [] };
+    }
+    if (typeof state.workspaceDir !== 'string' || state.workspaceDir.length === 0) {
+      state.workspaceDir = this.workspaceDir;
+    }
+    return state;
   }
 
   private writeWorkspaceState(state: WorkspaceStateFile): void {

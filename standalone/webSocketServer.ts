@@ -96,7 +96,12 @@ export class StandaloneWebSocketServer {
 
   constructor(
     server: http.Server,
-    private readonly onMessage: (clientId: number, role: ClientRole, message: ClientMessage) => void,
+    private readonly onMessage: (
+      clientId: number,
+      role: ClientRole,
+      message: ClientMessage,
+    ) => void,
+    private readonly onConnect?: (clientId: number, role: ClientRole) => void,
   ) {
     server.on('upgrade', (request, socket) => {
       const role: ClientRole | null =
@@ -135,10 +140,11 @@ export class StandaloneWebSocketServer {
       socket.on('data', (chunk) => this.handleData(client.id, chunk));
       socket.on('close', () => this.clients.delete(client.id));
       socket.on('error', () => this.clients.delete(client.id));
+      this.onConnect?.(client.id, client.role);
     });
   }
 
-  send(clientId: number, message: ServerMessage): void {
+  send(clientId: number, message: ClientMessage | ServerMessage): void {
     const client = this.clients.get(clientId);
     if (!client) {
       return;
@@ -188,7 +194,10 @@ export class StandaloneWebSocketServer {
 
       try {
         const parsed = JSON.parse(frame.payload.toString('utf8')) as ClientMessage;
-        console.log(`[WS] client ${clientId} (${client.role}) →`, JSON.stringify(parsed).slice(0, 120));
+        console.log(
+          `[WS] client ${clientId} (${client.role}) →`,
+          JSON.stringify(parsed).slice(0, 120),
+        );
         this.onMessage(clientId, client.role, parsed);
       } catch (error) {
         console.error('[Pixel Agents] Failed to parse standalone WS message:', error);

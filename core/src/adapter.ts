@@ -8,7 +8,7 @@
  * interface -- it's already VS Code-free (plain fs I/O in layoutPersistence.ts).
  */
 
-import type { PersistedAgent } from './schemas.js';
+import type { PersistedAgent, PersistedOverlayState } from './schemas.js';
 
 export interface StateAdapter {
   // ── Per-workspace (agents + seats) ──────────────────────────────────
@@ -18,6 +18,9 @@ export interface StateAdapter {
 
   loadSeats(): Record<string, { palette?: number; hueShift?: number; seatId?: string }>;
   saveSeats(seats: Record<string, { palette?: number; hueShift?: number; seatId?: string }>): void;
+
+  loadOverlayState(): PersistedOverlayState;
+  saveOverlayState(state: PersistedOverlayState): void;
 
   // ── User-level settings (shared across workspaces) ─────────────────
 

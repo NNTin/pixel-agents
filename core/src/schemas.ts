@@ -28,6 +28,58 @@ export interface AgentMeta {
   seatId: string | null;
 }
 
+/** Persisted overlay tool state for standalone producer-backed agents */
+export interface PersistedOverlayToolState {
+  toolId: string;
+  status: string;
+  toolName?: string;
+  done?: boolean;
+  permissionActive?: boolean;
+  runInBackground?: boolean;
+}
+
+/** Persisted overlay subagent tool state */
+export interface PersistedOverlaySubagentToolState {
+  toolId: string;
+  status: string;
+  done?: boolean;
+}
+
+/** Persisted overlay subagent group keyed by parent tool */
+export interface PersistedOverlaySubagentState {
+  parentToolId: string;
+  permissionActive?: boolean;
+  tools: PersistedOverlaySubagentToolState[];
+}
+
+/** Persisted standalone overlay agent mirrored from the trusted producer path */
+export interface PersistedOverlayAgent {
+  id: number;
+  folderName?: string;
+  isExternal?: boolean;
+  isTeammate?: boolean;
+  teammateName?: string;
+  parentAgentId?: number;
+  teamName?: string;
+  hooksOnly?: boolean;
+  selected?: boolean;
+  status?: 'active' | 'waiting';
+  permissionActive?: boolean;
+  tools: PersistedOverlayToolState[];
+  subagents: PersistedOverlaySubagentState[];
+  agentName?: string;
+  isTeamLead?: boolean;
+  leadAgentId?: number;
+  teamUsesTmux?: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+/** Persisted standalone overlay replay snapshot */
+export interface PersistedOverlayState {
+  agents: PersistedOverlayAgent[];
+}
+
 // ── Layout ───────────────────────────────────────────────────
 
 /** Color value for floor/wall/furniture colorization */

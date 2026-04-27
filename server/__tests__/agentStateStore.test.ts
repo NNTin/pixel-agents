@@ -10,6 +10,8 @@ function createMockAdapter(): StateAdapter {
     saveAgents: vi.fn(),
     loadSeats: vi.fn(() => ({})),
     saveSeats: vi.fn(),
+    loadOverlayState: vi.fn(() => ({ agents: [] })),
+    saveOverlayState: vi.fn(),
     getSetting: vi.fn(<T>(_k: string, d: T): T => d),
     setSetting: vi.fn<(key: string, value: unknown) => void>(),
     loadLegacyLayout: vi.fn(() => undefined),
