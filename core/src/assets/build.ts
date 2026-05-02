@@ -9,9 +9,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { CatalogEntry } from './types.js';
 import type { FurnitureManifest, InheritedProps, ManifestGroup } from './manifestUtils.js';
 import { flattenManifest } from './manifestUtils.js';
+import type { CatalogEntry } from './types.js';
 
 // ── Furniture catalog ─────────────────────────────────────────────────────────
 
@@ -35,10 +35,14 @@ export function buildFurnitureCatalog(assetsDir: string): CatalogEntry[] {
       if (manifest.type === 'asset') {
         // Single-asset manifest — validate required fields
         if (
-          manifest.width == null ||
-          manifest.height == null ||
-          manifest.footprintW == null ||
-          manifest.footprintH == null
+          manifest.width === undefined ||
+          manifest.width === null ||
+          manifest.height === undefined ||
+          manifest.height === null ||
+          manifest.footprintW === undefined ||
+          manifest.footprintW === null ||
+          manifest.footprintH === undefined ||
+          manifest.footprintH === null
         ) {
           continue;
         }
@@ -131,6 +135,7 @@ export function buildAssetIndex(assetsDir: string) {
     floors: listSorted('floors', /^floor_\d+\.png$/i),
     walls: listSorted('walls', /^wall_\d+\.png$/i),
     characters: listSorted('characters', /^char_\d+\.png$/i),
+    carpets: listSorted('carpets', /^carpet_\d+\.png$/i),
     defaultLayout,
   };
 }

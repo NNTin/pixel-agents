@@ -8,28 +8,32 @@
  * Only imported in browser runtime; tree-shaken from VS Code webview runtime.
  */
 
+import { rgbaToHex } from '../../core/src/assets/colorUtils.ts';
 import {
+  CARPET_GRID_COLS,
+  CARPET_MARCHING_SQUARES_COUNT,
+  CARPET_TILE_SIZE,
   CHAR_FRAME_H,
   CHAR_FRAME_W,
   CHAR_FRAMES_PER_ROW,
   CHARACTER_DIRECTIONS,
   FLOOR_TILE_SIZE,
-  PNG_ALPHA_THRESHOLD,
   WALL_BITMASK_COUNT,
   WALL_GRID_COLS,
   WALL_PIECE_HEIGHT,
   WALL_PIECE_WIDTH,
-} from '../../shared/assets/constants.ts';
+} from '../../core/src/assets/constants.ts';
 import type {
   AssetIndex,
   CatalogEntry,
   CharacterDirectionSprites,
-} from '../../shared/assets/types.ts';
+} from '../../core/src/assets/types.ts';
 
 interface MockPayload {
   characters: CharacterDirectionSprites[];
   floorSprites: string[][][];
   wallSets: string[][][][];
+  carpetSets: string[][][][];
   furnitureCatalog: CatalogEntry[];
   furnitureSprites: Record<string, string[][]>;
   layout: unknown;
@@ -45,14 +49,6 @@ interface DecodedPng {
   width: number;
   height: number;
   data: Uint8ClampedArray;
-}
-
-function rgbaToHex(r: number, g: number, b: number, a: number): string {
-  if (a < PNG_ALPHA_THRESHOLD) return '';
-  const rgb =
-    `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
-  if (a >= 255) return rgb;
-  return `${rgb}${a.toString(16).padStart(2, '0').toUpperCase()}`;
 }
 
 function getPixel(
@@ -167,6 +163,21 @@ async function decodeWallsFromPng(base: string, index: AssetIndex): Promise<stri
   return wallSets;
 }
 
+async function decodeCarpeetsFromPng(base: string, index: AssetIndex): Promise<string[][][][]> {
+  const sets: string[][][][] = [];
+  for (const relPath of index.carpets ?? []) {
+    const png = await decodePng(`${base}assets/carpets/${relPath}`);
+    const set: string[][][] = [];
+    for (let msCase = 0; msCase < CARPET_MARCHING_SQUARES_COUNT; msCase++) {
+      const ox = (msCase % CARPET_GRID_COLS) * CARPET_TILE_SIZE;
+      const oy = Math.floor(msCase / CARPET_GRID_COLS) * CARPET_TILE_SIZE;
+      set.push(readSprite(png, CARPET_TILE_SIZE, CARPET_TILE_SIZE, ox, oy));
+    }
+    sets.push(set);
+  }
+  return sets;
+}
+
 async function decodeFurnitureFromPng(
   base: string,
   catalog: CatalogEntry[],
@@ -197,14 +208,16 @@ export async function initBrowserMock(): Promise<void> {
   ]);
 
   const shouldTryDecoded = import.meta.env.DEV;
-  const [decodedCharacters, decodedFloors, decodedWalls, decodedFurniture] = shouldTryDecoded
-    ? await Promise.all([
-        fetchJsonOptional<CharacterDirectionSprites[]>(`${base}assets/decoded/characters.json`),
-        fetchJsonOptional<string[][][]>(`${base}assets/decoded/floors.json`),
-        fetchJsonOptional<string[][][][]>(`${base}assets/decoded/walls.json`),
-        fetchJsonOptional<Record<string, string[][]>>(`${base}assets/decoded/furniture.json`),
-      ])
-    : [null, null, null, null];
+  const [decodedCharacters, decodedFloors, decodedWalls, decodedFurniture, decodedCarpets] =
+    shouldTryDecoded
+      ? await Promise.all([
+          fetchJsonOptional<CharacterDirectionSprites[]>(`${base}assets/decoded/characters.json`),
+          fetchJsonOptional<string[][][]>(`${base}assets/decoded/floors.json`),
+          fetchJsonOptional<string[][][][]>(`${base}assets/decoded/walls.json`),
+          fetchJsonOptional<Record<string, string[][]>>(`${base}assets/decoded/furniture.json`),
+          fetchJsonOptional<string[][][][]>(`${base}assets/decoded/carpets.json`),
+        ])
+      : [null, null, null, null, null];
 
   const hasDecoded = !!(decodedCharacters && decodedFloors && decodedWalls && decodedFurniture);
 
@@ -225,6 +238,9 @@ export async function initBrowserMock(): Promise<void> {
         decodeFurnitureFromPng(base, catalog),
       ]);
 
+  const carpetSets: string[][][][] =
+    decodedCarpets ?? (await decodeCarpeetsFromPng(base, assetIndex));
+
   const layout = assetIndex.defaultLayout
     ? await fetch(`${base}assets/${assetIndex.defaultLayout}`).then((r) => r.json())
     : null;
@@ -233,13 +249,14 @@ export async function initBrowserMock(): Promise<void> {
     characters,
     floorSprites,
     wallSets,
+    carpetSets,
     furnitureCatalog: catalog,
     furnitureSprites,
     layout,
   };
 
   console.log(
-    `[BrowserMock] Ready (${hasDecoded ? 'decoded-json' : 'browser-png-decode'}) — ${characters.length} chars, ${floorSprites.length} floors, ${wallSets.length} wall sets, ${catalog.length} furniture items`,
+    `[BrowserMock] Ready (${hasDecoded ? 'decoded-json' : 'browser-png-decode'}) — ${characters.length} chars, ${floorSprites.length} floors, ${wallSets.length} wall sets, ${carpetSets.length} carpet variants, ${catalog.length} furniture items`,
   );
 }
 
@@ -250,8 +267,15 @@ export async function initBrowserMock(): Promise<void> {
 export function dispatchMockMessages(): void {
   if (!mockPayload) return;
 
-  const { characters, floorSprites, wallSets, furnitureCatalog, furnitureSprites, layout } =
-    mockPayload;
+  const {
+    characters,
+    floorSprites,
+    wallSets,
+    carpetSets,
+    furnitureCatalog,
+    furnitureSprites,
+    layout,
+  } = mockPayload;
 
   function dispatch(data: unknown): void {
     window.dispatchEvent(new MessageEvent('message', { data }));
@@ -262,13 +286,14 @@ export function dispatchMockMessages(): void {
   dispatch({ type: 'characterSpritesLoaded', characters });
   dispatch({ type: 'floorTilesLoaded', sprites: floorSprites });
   dispatch({ type: 'wallTilesLoaded', sets: wallSets });
+  dispatch({ type: 'carpetTilesLoaded', sets: carpetSets });
   dispatch({ type: 'furnitureAssetsLoaded', catalog: furnitureCatalog, sprites: furnitureSprites });
   dispatch({ type: 'layoutLoaded', layout });
   dispatch({
     type: 'settingsLoaded',
     soundEnabled: false,
-    extensionVersion: '1.2.0',
-    lastSeenVersion: '1.1',
+    extensionVersion: '1.3.0',
+    lastSeenVersion: '1.2',
   });
 
   console.log('[BrowserMock] Messages dispatched');

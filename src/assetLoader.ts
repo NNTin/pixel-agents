@@ -9,22 +9,27 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { CHAR_COUNT, CHAR_FRAMES_PER_ROW, WALL_BITMASK_COUNT } from '../shared/assets/constants.js';
+import {
+  CHAR_COUNT,
+  CHAR_FRAMES_PER_ROW,
+  WALL_BITMASK_COUNT,
+} from '../core/src/assets/constants.js';
 import type {
   FurnitureAsset,
   FurnitureManifest,
   InheritedProps,
   ManifestGroup,
-} from '../shared/assets/manifestUtils.js';
-import { flattenManifest } from '../shared/assets/manifestUtils.js';
+} from '../core/src/assets/manifestUtils.js';
+import { flattenManifest } from '../core/src/assets/manifestUtils.js';
 import {
   decodeCharacterPng,
   decodeFloorPng,
+  parseCarpetPng,
   parseWallPng,
   pngToSpriteData,
-} from '../shared/assets/pngDecoder.js';
-import type { CharacterDirectionSprites } from '../shared/assets/types.js';
-export type { CharacterDirectionSprites } from '../shared/assets/types.js';
+} from '../core/src/assets/pngDecoder.js';
+import type { CharacterDirectionSprites } from '../core/src/assets/types.js';
+export type { CharacterDirectionSprites } from '../core/src/assets/types.js';
 
 import { LAYOUT_REVISION_KEY } from './constants.js';
 
@@ -241,7 +246,7 @@ export function loadDefaultLayout(assetsRoot: string): Record<string, unknown> |
 
 // ── Wall tile loading ────────────────────────────────────────
 
-export interface LoadedWallTiles {
+interface LoadedWallTiles {
   /** Array of wall sets, each containing 16 sprites indexed by bitmask (N=1,E=2,S=4,W=8) */
   sets: string[][][][];
 }
@@ -309,7 +314,7 @@ export function sendWallTilesToWebview(webview: vscode.Webview, wallTiles: Loade
   console.log(`📤 Sent ${wallTiles.sets.length} wall tile set(s) to webview`);
 }
 
-export interface LoadedFloorTiles {
+interface LoadedFloorTiles {
   sprites: string[][][]; // N sprites (one per floor_N.png), each 16x16 SpriteData
 }
 
@@ -501,6 +506,79 @@ export function sendCharacterSpritesToWebview(
     characters: charSprites.characters,
   });
   console.log(`📤 Sent ${charSprites.characters.length} character sprites to webview`);
+}
+
+// ── Carpet tile loading ──────────────────────────────────────
+
+export interface LoadedCarpetTiles {
+  /** Array of variants (3), each containing 16 sprites indexed by marching squares case (0-15) */
+  sets: string[][][][];
+}
+
+/**
+ * Load carpet tile sets from assets/carpets/ folder.
+ * Each file is named carpet_N.png (e.g. carpet_0.png, carpet_1.png, carpet_2.png).
+ * Files are loaded in numeric order; each PNG is a 64×64 grid of 16 marching-squares pieces.
+ */
+export async function loadCarpetTiles(assetsRoot: string): Promise<LoadedCarpetTiles | null> {
+  try {
+    const carpetsDir = path.join(assetsRoot, 'assets', 'carpets');
+    if (!fs.existsSync(carpetsDir)) {
+      console.log('[AssetLoader] No carpets/ directory found at:', carpetsDir);
+      return null;
+    }
+
+    console.log('[AssetLoader] Loading carpet tiles from:', carpetsDir);
+
+    // Find all carpet_N.png files and sort by index
+    const entries = fs.readdirSync(carpetsDir);
+    const carpetFiles: { index: number; filename: string }[] = [];
+    for (const entry of entries) {
+      const match = /^carpet_(\d+)\.png$/i.exec(entry);
+      if (match) {
+        carpetFiles.push({ index: parseInt(match[1], 10), filename: entry });
+      }
+    }
+
+    if (carpetFiles.length === 0) {
+      console.log('[AssetLoader] No carpet_N.png files found in carpets/');
+      return null;
+    }
+
+    carpetFiles.sort((a, b) => a.index - b.index);
+
+    const sets: string[][][][] = [];
+    for (const { filename } of carpetFiles) {
+      const filePath = path.join(carpetsDir, filename);
+      const pngBuffer = fs.readFileSync(filePath);
+      const sprites = parseCarpetPng(pngBuffer);
+      sets.push(sprites);
+    }
+
+    console.log(
+      `[AssetLoader] ✅ Loaded ${sets.length} carpet tile variant(s) (${sets.length * 16} pieces each)`,
+    );
+    return { sets };
+  } catch (err) {
+    console.error(
+      `[AssetLoader] ❌ Error loading carpet tiles: ${err instanceof Error ? err.message : err}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * Send carpet tiles to webview
+ */
+export function sendCarpetTilesToWebview(
+  webview: vscode.Webview,
+  carpetTiles: LoadedCarpetTiles,
+): void {
+  webview.postMessage({
+    type: 'carpetTilesLoaded',
+    sets: carpetTiles.sets,
+  });
+  console.log(`📤 Sent ${carpetTiles.sets.length} carpet tile variant(s) to webview`);
 }
 
 /**

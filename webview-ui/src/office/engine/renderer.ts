@@ -9,6 +9,8 @@ import {
   BUTTON_LINE_WIDTH_ZOOM_FACTOR,
   BUTTON_MIN_RADIUS,
   BUTTON_RADIUS_ZOOM_FACTOR,
+  CARPET_DEFAULT_ACCENT_COLOR,
+  CARPET_DEFAULT_COLOR,
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
   DELETE_BUTTON_BG,
@@ -33,6 +35,7 @@ import {
   VOID_TILE_DASH_PATTERN,
   VOID_TILE_OUTLINE_COLOR,
 } from '../../constants.js';
+import { getCarpetJunctionSprite, getCarpetPaletteKey, hasCarpetSprites } from '../carpetTiles.js';
 import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR } from '../floorTiles.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import {
@@ -41,6 +44,7 @@ import {
   getCharacterSprites,
 } from '../sprites/spriteData.js';
 import type {
+  CarpetTile,
   Character,
   FurnitureInstance,
   Seat,
@@ -54,6 +58,7 @@ import { renderMatrixEffect } from './matrixEffect.js';
 
 // ── Render functions ────────────────────────────────────────────
 
+/** @internal */
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
   tileMap: TileTypeVal[][],
@@ -100,11 +105,90 @@ export function renderTileGrid(
   }
 }
 
+/**
+ * Render carpet junctions after the floor tiles pass.
+ * Uses dual-grid marching squares: iterates all junctions (corners between tiles)
+ * and draws the appropriate 16×16 sprite centered on each corner.
+ */
+export function renderCarpetLayer(
+  ctx: CanvasRenderingContext2D,
+  carpetTiles: (CarpetTile | null)[],
+  cols: number,
+  rows: number,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  if (!hasCarpetSprites()) return;
+
+  const s = TILE_SIZE * zoom;
+  // Half tile offset so junction sprite is centered on the corner between 4 tiles
+  const halfS = s / 2;
+
+  for (let jy = 0; jy <= rows; jy++) {
+    for (let jx = 0; jx <= cols; jx++) {
+      const localGroups = new Map<
+        string,
+        {
+          variant: number;
+          color: ColorValue;
+          accentColor: ColorValue;
+          paletteKey: string;
+          order: number;
+        }
+      >();
+
+      const adjacent = [
+        { col: jx - 1, row: jy - 1 },
+        { col: jx, row: jy - 1 },
+        { col: jx, row: jy },
+        { col: jx - 1, row: jy },
+      ];
+
+      for (const pos of adjacent) {
+        if (pos.col < 0 || pos.row < 0 || pos.col >= cols || pos.row >= rows) continue;
+        const tile = carpetTiles[pos.row * cols + pos.col];
+        if (!tile) continue;
+        const color = tile.color ?? CARPET_DEFAULT_COLOR;
+        const accentColor = tile.accentColor ?? CARPET_DEFAULT_ACCENT_COLOR;
+        const paletteKey = getCarpetPaletteKey(color, accentColor);
+        const key = `${tile.variant}:${paletteKey}`;
+        const order = tile.order ?? 0;
+        const existing = localGroups.get(key);
+        if (!existing || order > existing.order) {
+          localGroups.set(key, { variant: tile.variant, color, accentColor, paletteKey, order });
+        }
+      }
+
+      const orderedGroups = [...localGroups.values()].sort((a, b) => a.order - b.order);
+      for (const { variant, color, accentColor, paletteKey } of orderedGroups) {
+        const sprite = getCarpetJunctionSprite(
+          jx,
+          jy,
+          variant,
+          carpetTiles,
+          cols,
+          rows,
+          color,
+          accentColor,
+          paletteKey,
+        );
+        if (!sprite) continue;
+        const cached = getCachedSprite(sprite, zoom);
+        // Junction (jx, jy) maps to pixel corner (jx*TILE_SIZE, jy*TILE_SIZE)
+        // Sprite is centered on the corner: offset by -halfS so it spans all 4 adjacent tiles
+        ctx.drawImage(cached, offsetX + jx * s - halfS, offsetY + jy * s - halfS);
+      }
+    }
+  }
+}
+
 interface ZDrawable {
   zY: number;
   draw: (ctx: CanvasRenderingContext2D) => void;
 }
 
+/** @internal */
 export function renderScene(
   ctx: CanvasRenderingContext2D,
   furniture: FurnitureInstance[],
@@ -212,7 +296,7 @@ export function renderScene(
 
 // ── Seat indicators ─────────────────────────────────────────────
 
-export function renderSeatIndicators(
+function renderSeatIndicators(
   ctx: CanvasRenderingContext2D,
   seats: Map<string, Seat>,
   characters: Map<number, Character>,
@@ -251,6 +335,7 @@ export function renderSeatIndicators(
 
 // ── Edit mode overlays ──────────────────────────────────────────
 
+/** @internal */
 export function renderGridOverlay(
   ctx: CanvasRenderingContext2D,
   offsetX: number,
@@ -296,7 +381,7 @@ export function renderGridOverlay(
 }
 
 /** Draw faint expansion placeholders 1 tile outside grid bounds (ghost border). */
-export function renderGhostBorder(
+function renderGhostBorder(
   ctx: CanvasRenderingContext2D,
   offsetX: number,
   offsetY: number,
@@ -339,6 +424,7 @@ export function renderGhostBorder(
   ctx.restore();
 }
 
+/** @internal */
 export function renderGhostPreview(
   ctx: CanvasRenderingContext2D,
   sprite: SpriteData,
@@ -371,6 +457,7 @@ export function renderGhostPreview(
   ctx.restore();
 }
 
+/** @internal */
 export function renderSelectionHighlight(
   ctx: CanvasRenderingContext2D,
   col: number,
@@ -392,6 +479,7 @@ export function renderSelectionHighlight(
   ctx.restore();
 }
 
+/** @internal */
 export function renderDeleteButton(
   ctx: CanvasRenderingContext2D,
   col: number,
@@ -431,7 +519,7 @@ export function renderDeleteButton(
   return { cx, cy, radius };
 }
 
-export function renderRotateButton(
+function renderRotateButton(
   ctx: CanvasRenderingContext2D,
   col: number,
   row: number,
@@ -480,7 +568,7 @@ export function renderRotateButton(
 
 // ── Speech bubbles ──────────────────────────────────────────────
 
-export function renderBubbles(
+function renderBubbles(
   ctx: CanvasRenderingContext2D,
   characters: Character[],
   offsetX: number,
@@ -576,6 +664,7 @@ export function renderFrame(
   tileColors?: Array<ColorValue | null>,
   layoutCols?: number,
   layoutRows?: number,
+  carpetTiles?: Array<CarpetTile | null>,
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -592,6 +681,11 @@ export function renderFrame(
 
   // Draw tiles (floor + wall base color)
   renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols);
+
+  // Draw carpet overlay (after floor, before furniture and characters)
+  if (carpetTiles && carpetTiles.length > 0) {
+    renderCarpetLayer(ctx, carpetTiles, cols, rows, offsetX, offsetY, zoom);
+  }
 
   // Seat indicators (below furniture/characters, on top of floor)
   if (selection) {

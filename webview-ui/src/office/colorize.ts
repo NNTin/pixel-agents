@@ -44,7 +44,7 @@ export function clearColorizeCache(): void {
  * 4. Create HSL color with user's hue + saturation
  * 5. Convert HSL -> RGB -> hex
  */
-export function colorizeSprite(sprite: SpriteData, color: ColorValue): SpriteData {
+function colorizeSprite(sprite: SpriteData, color: ColorValue): SpriteData {
   const { h, s, b, c } = color;
   const result: SpriteData = [];
 
@@ -89,6 +89,33 @@ export function colorizeSprite(sprite: SpriteData, color: ColorValue): SpriteDat
   }
 
   return result;
+}
+
+/**
+ * Flat-fill colorize: replaces all non-empty pixels with a single computed color.
+ * Used for carpet sprites where each masked layer is a single solid color and the
+ * output should exactly match the user's chosen color.
+ */
+export function flatColorizeSprite(sprite: SpriteData, color: ColorValue): SpriteData {
+  const { h, s, b, c } = color;
+  let lightness = 0.5;
+  if (c !== 0) {
+    const factor = (100 + c) / 100;
+    lightness = 0.5 + (lightness - 0.5) * factor;
+  }
+  if (b !== 0) {
+    lightness = lightness + b / 200;
+  }
+  lightness = Math.max(0, Math.min(1, lightness));
+  const hex = hslToHex(h, s / 100, lightness);
+
+  return sprite.map((row) =>
+    row.map((pixel) => {
+      if (pixel === '') return '';
+      const alpha = extractAlpha(pixel);
+      return appendAlpha(hex, alpha);
+    }),
+  );
 }
 
 /** Extract alpha from a hex pixel string. Returns 255 for #RRGGBB, parsed value for #RRGGBBAA. */
