@@ -1,14 +1,17 @@
-import { _electron as electron } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
+import { _electron as electron } from '@playwright/test';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+
+import { namespaceE2EPath } from '../run-config';
 
 const REPO_ROOT = path.join(__dirname, '../..');
 const VSCODE_PATH_FILE = path.join(REPO_ROOT, '.vscode-test/vscode-executable.txt');
 const MOCK_CLAUDE_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude');
 const MOCK_CLAUDE_CMD_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude.cmd');
-const ARTIFACTS_DIR = path.join(REPO_ROOT, 'test-results/e2e');
+const MOCK_CLAUDE_RUNNER_PATH = path.join(REPO_ROOT, 'e2e/fixtures/mock-claude-runner.cjs');
+const ARTIFACTS_DIR = namespaceE2EPath(path.join(REPO_ROOT, 'test-results/e2e'));
 const IS_WINDOWS = process.platform === 'win32';
 const PATH_SEP = IS_WINDOWS ? ';' : ':';
 
@@ -21,6 +24,8 @@ export interface VSCodeSession {
   workspaceDir: string;
   /** Path to the mock invocations log. */
   mockLogFile: string;
+  /** Raw Playwright video directory for this test run, if recording is enabled. */
+  videoDir?: string;
   cleanup: () => Promise<void>;
 }
 
@@ -71,13 +76,15 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
   }
 
   // Copy mock-claude into an isolated bin dir
+  const mockClaudeBinaryPath = path.join(mockBinDir, IS_WINDOWS ? 'claude.cmd' : 'claude');
   if (IS_WINDOWS) {
     // Windows: copy the .cmd batch file as 'claude.cmd'
-    fs.copyFileSync(MOCK_CLAUDE_CMD_PATH, path.join(mockBinDir, 'claude.cmd'));
+    fs.copyFileSync(MOCK_CLAUDE_CMD_PATH, mockClaudeBinaryPath);
+    fs.copyFileSync(MOCK_CLAUDE_RUNNER_PATH, path.join(mockBinDir, 'mock-claude-runner.cjs'));
   } else {
-    const mockDest = path.join(mockBinDir, 'claude');
-    fs.copyFileSync(MOCK_CLAUDE_PATH, mockDest);
-    fs.chmodSync(mockDest, 0o755);
+    fs.copyFileSync(MOCK_CLAUDE_PATH, mockClaudeBinaryPath);
+    fs.chmodSync(mockClaudeBinaryPath, 0o755);
+    fs.copyFileSync(MOCK_CLAUDE_RUNNER_PATH, path.join(mockBinDir, 'mock-claude-runner.cjs'));
   }
 
   // macOS: VS Code's integrated terminal resolves PATH from the login shell,
@@ -98,6 +105,8 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
               env: {
                 PATH: `${mockBinDir}:/usr/local/bin:/usr/bin:/bin`,
                 HOME: tmpHome,
+                PIXEL_AGENTS_E2E_CLAUDE_BIN: mockClaudeBinaryPath,
+                PIXEL_AGENTS_NODE_BIN: process.execPath,
                 ZDOTDIR: tmpHome,
               },
             },
@@ -112,11 +121,14 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
   }
 
   const mockLogFile = path.join(tmpHome, '.claude-mock', 'invocations.log');
+  const launchLogFile = path.join(tmpHome, '.claude-mock', 'launch.log');
 
   // --- Video output dir ---
   const safeTitle = testTitle.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-  const videoDir = path.join(ARTIFACTS_DIR, 'videos', safeTitle);
-  fs.mkdirSync(videoDir, { recursive: true });
+  const videoDir = IS_WINDOWS ? undefined : path.join(ARTIFACTS_DIR, 'videos', safeTitle);
+  if (videoDir) {
+    fs.mkdirSync(videoDir, { recursive: true });
+  }
 
   // --- Environment for VS Code process ---
   const env: Record<string, string> = {
@@ -124,6 +136,9 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
     HOME: tmpHome,
     // Prepend mock bin so 'claude' resolves to our mock
     PATH: `${mockBinDir}${PATH_SEP}${process.env['PATH'] ?? '/usr/local/bin:/usr/bin:/bin'}`,
+    PIXEL_AGENTS_E2E_CLAUDE_BIN: mockClaudeBinaryPath,
+    PIXEL_AGENTS_E2E_LAUNCH_LOG: launchLogFile,
+    PIXEL_AGENTS_NODE_BIN: process.execPath,
     // Prevent VS Code from trying to talk to real accounts / telemetry
     VSCODE_TELEMETRY_DISABLED: '1',
   };
@@ -193,7 +208,7 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
     };
     if (!IS_WINDOWS) {
       launchOptions.recordVideo = {
-        dir: videoDir,
+        dir: videoDir!,
         size: { width: 1280, height: 800 },
       };
     }
@@ -214,7 +229,15 @@ export async function launchVSCode(testTitle: string): Promise<VSCodeSession> {
       await window.waitForTimeout(500);
     }
 
-    return { app, window, tmpHome, workspaceDir: resolvedWorkspaceDir, mockLogFile, cleanup };
+    return {
+      app,
+      window,
+      tmpHome,
+      workspaceDir: resolvedWorkspaceDir,
+      mockLogFile,
+      videoDir,
+      cleanup,
+    };
   } catch (error) {
     await cleanup();
     throw error;
